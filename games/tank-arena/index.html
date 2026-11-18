@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tank Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Same greenhouse-control-room tokens as the hub. Layout: player bar, three views
+   (Garage, League, Free-for-all). The battle canvas is the one loud element. */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A; --floor: #0A211C;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.5;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%);
+  background-attachment: fixed;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+.player { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
+select, input[type="text"] { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14.5px; color: var(--text); }
+input[type="text"]::placeholder { color: var(--muted); }
+
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+.lede { color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 0 0 12px; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; color: var(--muted); text-decoration: none; display: inline-block; }
+.btn:hover, .btn[aria-pressed="true"], .btn[aria-current="page"] { border-color: var(--leaf); color: var(--leaf); }
+.btn.primary { background: var(--sun); border-color: var(--sun); color: #1A1400; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.1); color: #1A1400; }
+.btn.danger.armed { background: var(--down); border-color: var(--down); color: #1A0500; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.notice { margin-bottom: 24px; padding: 14px 20px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); font-size: 14.5px; }
+.notice b { color: var(--text); font-weight: 600; }
+.msg { min-height: 22px; color: var(--sun); font-size: 14.5px; margin: 12px 0 0; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+.garage { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
+.mine { display: flex; flex-direction: column; gap: 8px; }
+.tankbtn { width: 100%; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: center; }
+.tankbtn:hover, .tankbtn[aria-pressed="true"] { border-color: var(--sun); }
+.tankbtn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; flex: none; }
+.empty { color: var(--muted); font-size: 14.5px; margin: 0 0 8px; }
+
+.fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-bottom: 20px; }
+.fields input[type="text"] { width: 100%; }
+.swatches { display: flex; gap: 6px; align-items: center; }
+.swatch { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; padding: 0; }
+.swatch[aria-pressed="true"] { border-color: var(--text); }
+.budget { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.budget .track { flex: 1; height: 8px; border-radius: 4px; background: rgba(42, 90, 75, .5); overflow: hidden; }
+.budget .fill { height: 100%; background: var(--sun); border-radius: 4px; transition: width .15s; }
+.budget strong { font-weight: 400; color: var(--sun); white-space: nowrap; }
+.stat { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px 150px; gap: 12px; align-items: center; padding: 7px 0; }
+.stat label { font-weight: 600; font-size: 14.5px; }
+.stat output { text-align: right; color: var(--sun); }
+.stat small { color: var(--muted); font-size: 13px; }
+input[type="range"] { width: 100%; accent-color: var(--sun); margin: 0; }
+.rule { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+.behave { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; }
+.behave label { display: block; font-weight: 600; font-size: 14.5px; margin-bottom: 6px; }
+.behave small { color: var(--muted); font-size: 13px; display: block; margin-top: 4px; }
+.ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 20px; }
+.actions .spacer { flex: 1; }
+
+.stage { margin-top: 16px; }
+.stage-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.stage-bar .spacer { flex: 1; }
+canvas { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
+.result { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 14.5px; }
+.result li { display: flex; align-items: center; gap: 8px; }
+.result b { color: var(--text); font-weight: 600; }
+
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th { text-align: left; font-weight: 400; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 11px 12px 11px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; padding-right: 0; padding-left: 12px; }
+td .dot { vertical-align: -2px; margin-right: 8px; }
+tr.me td { background: rgba(244, 196, 83, .07); }
+.build { color: var(--muted); font-size: 12.5px; letter-spacing: .04em; }
+.pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 0; }
+
+footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; max-width: 80ch; }
+@media (max-width: 800px) {
+  .wrap { padding: 0 16px 40px; }
+  .garage { grid-template-columns: 1fr; }
+  .stat { grid-template-columns: 96px minmax(0, 1fr) 24px; }
+  .stat small { grid-column: 1 / -1; margin-top: -6px; }
+  .fields { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="mono" href="../../">← Back to hub</a>
+    <div class="player">
+      <label class="mono" for="who">Playing as</label>
+      <select id="who"></select>
+      <input type="text" id="newName" placeholder="Your name" maxlength="20" hidden>
+      <button class="btn" id="addPlayer" type="button" hidden>Join</button>
+    </div>
+  </header>
+
+  <h1>Tank Arena</h1>
+  <p class="lede">Every tank gets the same 30 points. Spend them your way, save your tank, and it fights everyone else's in the league. Come back, see what beat you, and retune.</p>
+
+  <nav class="tabs" aria-label="Views">
+    <a class="btn mono" href="#garage" data-view="garage">Garage</a>
+    <a class="btn mono" href="#league" data-view="league">League</a>
+    <a class="btn mono" href="#arena" data-view="arena">Free-for-all</a>
+  </nav>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <!-- ================= Garage ================= -->
+  <section id="view-garage">
+    <div class="garage">
+      <div class="panel">
+        <h2>My tanks</h2>
+        <div class="mine" id="mine"></div>
+        <button class="btn mono" id="newTank" type="button" style="margin-top: 12px; width: 100%">+ New tank</button>
+      </div>
+
+      <div class="panel" id="editor">
+        <div class="fields">
+          <input type="text" id="tname" placeholder="Tank name" maxlength="24" aria-label="Tank name">
+          <div class="swatches" id="swatches" role="group" aria-label="Colour"></div>
+        </div>
+
+        <div class="budget">
+          <span class="mono" style="color: var(--muted)">Points</span>
+          <div class="track"><div class="fill" id="budgetFill"></div></div>
+          <strong class="num" id="budgetText"></strong>
+        </div>
+        <div id="stats"></div>
+
+        <hr class="rule">
+        <div class="behave">
+          <div>
+            <label for="dodge">Driving style</label>
+            <input type="range" id="dodge" min="0" max="100" step="5">
+            <div class="ends"><span>Hold steady, aim better</span><span>Weave, harder to hit</span></div>
+          </div>
+          <div>
+            <label for="target">Who to shoot first</label>
+            <select id="target">
+              <option value="nearest">Nearest tank</option>
+              <option value="weakest">Weakest tank</option>
+              <option value="strongest">Strongest tank</option>
+            </select>
+            <small>Only matters in free-for-all battles.</small>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="save" type="button">Save tank</button>
+          <button class="btn danger" id="del" type="button">Delete</button>
+          <span class="spacer"></span>
+          <label class="mono" for="foe" style="color: var(--muted)">Test against</label>
+          <select id="foe"></select>
+          <button class="btn" id="test" type="button">Test duel</button>
+        </div>
+        <p class="msg" id="msg" role="status"></p>
+
+        <div class="stage" id="testStage" hidden>
+          <div class="stage-bar"><span class="mono" id="testLabel" style="color: var(--muted)"></span><span class="spacer"></span><span id="testSpeed"></span></div>
+          <canvas id="testCanvas" width="760" height="460"></canvas>
+          <ul class="result" id="testResult"></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= League ================= -->
+  <section id="view-league" hidden>
+    <div class="panel">
+      <h2>League table</h2>
+      <p class="empty" id="leagueNote"></p>
+      <div class="tablewrap"><table id="table"></table></div>
+      <div class="pick">
+        <span class="mono" style="color: var(--muted)">Watch a duel</span>
+        <select id="duelA" aria-label="First tank"></select>
+        <span class="mono" style="color: var(--muted)">vs</span>
+        <select id="duelB" aria-label="Second tank"></select>
+        <button class="btn" id="watch" type="button">Watch</button>
+      </div>
+      <div class="stage" id="duelStage" hidden>
+        <div class="stage-bar"><span class="mono" id="duelLabel" style="color: var(--muted)"></span><span class="spacer"></span><span id="duelSpeed"></span></div>
+        <canvas id="duelCanvas" width="760" height="460"></canvas>
+        <ul class="result" id="duelResult"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Free-for-all ================= -->
+  <section id="view-arena" hidden>
+    <div class="panel">
+      <h2>Free-for-all</h2>
+      <p class="empty">Every tank in one arena. Last one standing wins. Each battle is different.</p>
+      <div class="stage-bar">
+        <button class="btn primary" id="startArena" type="button">Start a battle</button>
+        <span class="mono" id="arenaLabel" style="color: var(--muted)"></span>
+        <span class="spacer"></span><span id="arenaSpeed"></span>
+      </div>
+      <canvas id="arenaCanvas" width="980" height="620"></canvas>
+      <ul class="result" id="arenaResult"></ul>
+    </div>
+  </section>
+
+  <footer>
+    Balance: every stat point is tuned to be worth about the same, checked by running thousands of duels between random builds. No single slider wins on its own; the mix and the matchups decide.
+    Player names have no password, so only edit your own tanks.
+  </footer>
+</div>
+
+<script src="config.js"></script>
+<script src="sim.js"></script>
+<script>
+const T = window.TankSim, CFG = window.TANK_CONFIG || { dbUrl: "", house: [] };
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const COLORS = ["#7BE0A0", "#F4C453", "#FF8F7A", "#9FB8FF", "#D8A6FF", "#6FE3E1", "#FFB86B", "#F2F2F2"];
+const LABELS = {
+  armor: ["Armor", (d) => Math.round(d.hp) + " health"],
+  engine: ["Engine", (d) => Math.round(d.speed) + " speed"],
+  firepower: ["Firepower", (d) => d.damage.toFixed(1) + " damage per hit"],
+  reload: ["Reload", (d) => "fires every " + d.cooldown.toFixed(2) + "s"],
+  barrel: ["Barrel", (d) => Math.round(d.range) + " range"],
+  targeting: ["Targeting", (d) => "±" + Math.round(d.spread * 180 / Math.PI) + "° spread"]
+};
+const LEAGUE_ROUNDS = 6, FFA_RUNS = 40, FFA_MAX = 12;
+
+/* ================= storage =================
+   Tanks live either in a shared database (when config.js has a dbUrl) or in this browser. */
+const Store = {
+  remote: !!CFG.dbUrl,
+  async list() {
+    let saved = [];
+    if (this.remote) {
+      const r = await fetch(CFG.dbUrl.replace(/\/$/, "") + "/tanks.json");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      saved = Object.values((await r.json()) || {});
+    } else {
+      try { saved = JSON.parse(localStorage.getItem("tank-arena-tanks") || "[]"); } catch (e) { saved = []; }
+    }
+    const house = (CFG.house || []).map(T.sanitize);
+    const seen = new Set(house.map((t) => t.id));
+    return house.concat(saved.map(T.sanitize).filter((t) => t.id && !seen.has(t.id) && t.owner !== "House"));
+  },
+  async save(tank) {
+    if (this.remote) {
+      const r = await fetch(CFG.dbUrl.replace(/\/$/, "") + "/tanks/" + encodeURIComponent(tank.id) + ".json", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(tank) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+    } else this.local((list) => list.filter((t) => t.id !== tank.id).concat(tank));
+  },
+  async remove(id) {
+    if (this.remote) {
+      const r = await fetch(CFG.dbUrl.replace(/\/$/, "") + "/tanks/" + encodeURIComponent(id) + ".json", { method: "DELETE" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+    } else this.local((list) => list.filter((t) => t.id !== id));
+  },
+  local(change) {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem("tank-arena-tanks") || "[]"); } catch (e) {}
+    localStorage.setItem("tank-arena-tanks", JSON.stringify(change(list)));
+  }
+};
+
+const state = { tanks: [], player: "", draft: null, dirty: false, league: null, leagueSig: "", viewers: {} };
+try { state.player = localStorage.getItem("tank-arena-player") || ""; } catch (e) {}
+
+let msgTimer;
+function say(text) { $("msg").textContent = text; clearTimeout(msgTimer); msgTimer = setTimeout(() => { $("msg").textContent = ""; }, 5000); }
+function byId(id) { return state.tanks.find((t) => t.id === id); }
+function dot(color) { const d = el("span", "dot"); d.style.background = color; return d; }
+
+/* ================= players ================= */
+function renderPlayers() {
+  const names = [...new Set(state.tanks.map((t) => t.owner).filter((o) => o !== "House"))];
+  if (state.player && !names.includes(state.player)) names.push(state.player);
+  names.sort((a, b) => a.localeCompare(b));
+  const sel = $("who");
+  sel.textContent = "";
+  if (!state.player) sel.appendChild(new Option("Choose a player…", ""));
+  names.forEach((n) => sel.appendChild(new Option(n, n)));
+  sel.appendChild(new Option("+ New player…", "__new"));
+  sel.value = state.player || "";
+}
+function setPlayer(name) {
+  state.player = name;
+  try { localStorage.setItem("tank-arena-player", name); } catch (e) {}
+  $("newName").hidden = true; $("addPlayer").hidden = true;
+  renderPlayers();
+  const mine = state.tanks.filter((t) => t.owner === name);
+  openDraft(mine[0] || null);
+  renderLeague();
+}
+$("who").addEventListener("change", (e) => {
+  if (e.target.value === "__new") { $("newName").hidden = false; $("addPlayer").hidden = false; $("newName").focus(); }
+  else if (e.target.value) setPlayer(e.target.value);
+});
+function joinNew() {
+  const name = $("newName").value.trim().slice(0, 20);
+  if (!name || name.toLowerCase() === "house") { $("newName").focus(); return; }
+  $("newName").value = "";
+  setPlayer(name);
+}
+$("addPlayer").addEventListener("click", joinNew);
+$("newName").addEventListener("keydown", (e) => { if (e.key === "Enter") joinNew(); });
+
+/* ================= garage ================= */
+function blankTank() {
+  return T.sanitize({ id: "", owner: state.player, name: "", color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    stats: { armor: 5, engine: 5, firepower: 5, reload: 5, barrel: 5, targeting: 5 }, ai: { dodge: 50, target: "nearest" } });
+}
+function openDraft(tank) {
+  state.draft = tank ? JSON.parse(JSON.stringify(tank)) : blankTank();
+  state.dirty = false;
+  renderGarage();
+}
+function renderGarage() {
+  const d = state.draft, mine = state.tanks.filter((t) => t.owner === state.player);
+  const box = $("mine");
+  box.textContent = "";
+  if (!state.player) box.appendChild(el("p", "empty", "Choose or add a player at the top to start building."));
+  else if (!mine.length) box.appendChild(el("p", "empty", "No saved tanks yet. Tune the sliders and save your first one."));
+  mine.forEach((t) => {
+    const b = el("button", "tankbtn");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(d && d.id === t.id));
+    b.append(dot(t.color), el("span", null, t.name));
+    b.addEventListener("click", () => openDraft(t));
+    box.appendChild(b);
+  });
+  $("newTank").disabled = !state.player;
+  if (!d) return;
+
+  $("tname").value = d.name === "Unnamed tank" ? "" : d.name;
+  const sw = $("swatches");
+  sw.textContent = "";
+  COLORS.forEach((c) => {
+    const b = el("button", "swatch");
+    b.type = "button"; b.style.background = c;
+    b.setAttribute("aria-label", "Colour " + c); b.setAttribute("aria-pressed", String(d.color === c));
+    b.addEventListener("click", () => { d.color = c; state.dirty = true; renderGarage(); });
+    sw.appendChild(b);
+  });
+
+  const stats = $("stats"), derived = T.derive(d.stats);
+  stats.textContent = "";
+  T.STATS.forEach((k) => {
+    const row = el("div", "stat"), lab = el("label", null, LABELS[k][0]), range = el("input"), out = el("output", "num", String(d.stats[k]));
+    lab.htmlFor = "s_" + k;
+    range.type = "range"; range.id = "s_" + k; range.min = T.MIN; range.max = T.MAX; range.step = 1; range.value = d.stats[k];
+    const note = el("small", null, LABELS[k][1](derived));
+    range.addEventListener("input", () => {
+      const others = T.spent(d.stats) - d.stats[k];
+      d.stats[k] = Math.max(T.MIN, Math.min(+range.value, T.BUDGET - others));   // can't spend past the budget
+      range.value = d.stats[k]; out.textContent = d.stats[k];
+      note.textContent = LABELS[k][1](T.derive(d.stats));
+      state.dirty = true; renderBudget();
+    });
+    row.append(lab, range, out, note);
+    stats.appendChild(row);
+  });
+  renderBudget();
+  $("dodge").value = d.ai.dodge;
+  $("target").value = d.ai.target;
+
+  const foe = $("foe"), keep = foe.value;
+  foe.textContent = "";
+  state.tanks.filter((t) => t.id !== d.id).forEach((t) => foe.appendChild(new Option(t.name + " (" + t.owner + ")", t.id)));
+  if (keep && byId(keep)) foe.value = keep;
+  $("del").hidden = !d.id;
+  $("save").disabled = !state.player;
+}
+function renderBudget() {
+  const used = T.spent(state.draft.stats), left = T.BUDGET - used;
+  $("budgetFill").style.width = used / T.BUDGET * 100 + "%";
+  $("budgetText").textContent = left === 0 ? "All " + T.BUDGET + " spent" : left + " of " + T.BUDGET + " left";
+}
+$("tname").addEventListener("input", (e) => { state.draft.name = e.target.value; state.dirty = true; });
+$("dodge").addEventListener("input", (e) => { state.draft.ai.dodge = +e.target.value; state.dirty = true; });
+$("target").addEventListener("change", (e) => { state.draft.ai.target = e.target.value; state.dirty = true; });
+$("newTank").addEventListener("click", () => openDraft(null));
+
+$("save").addEventListener("click", async () => {
+  const d = state.draft;
+  if (!state.player) { say("Choose a player at the top first."); return; }
+  if (!d.name.trim() || d.name === "Unnamed tank") { say("Give your tank a name first."); $("tname").focus(); return; }
+  const left = T.BUDGET - T.spent(d.stats);
+  const existing = d.id && byId(d.id);
+  const tank = T.sanitize(Object.assign({}, d, {
+    id: d.id || state.player.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 16) + "-" + Math.random().toString(36).slice(2, 8),
+    owner: state.player, v: existing ? existing.v + 1 : 1, updated: new Date().toISOString().slice(0, 10)
+  }));
+  try {
+    await Store.save(tank);
+    state.tanks = state.tanks.filter((t) => t.id !== tank.id).concat(tank);
+    openDraft(tank); renderPlayers(); renderLeague();
+    say("Saved." + (left > 0 ? " You still have " + left + " unspent point" + (left === 1 ? "" : "s") + "." : " It's in the league now."));
+  } catch (err) { say("Couldn't save: " + err.message + ". Try again in a moment."); }
+});
+
+let armTimer;
+$("del").addEventListener("click", async () => {
+  const b = $("del");
+  if (!b.classList.contains("armed")) {
+    b.classList.add("armed"); b.textContent = "Click again to delete";
+    armTimer = setTimeout(() => { b.classList.remove("armed"); b.textContent = "Delete"; }, 3000);
+    return;
+  }
+  clearTimeout(armTimer); b.classList.remove("armed"); b.textContent = "Delete";
+  const id = state.draft.id;
+  try {
+    await Store.remove(id);
+    state.tanks = state.tanks.filter((t) => t.id !== id);
+    openDraft(state.tanks.find((t) => t.owner === state.player) || null); renderPlayers(); renderLeague();
+    say("Tank deleted.");
+  } catch (err) { say("Couldn't delete: " + err.message); }
+});
+
+$("test").addEventListener("click", () => {
+  const foe = byId($("foe").value);
+  if (!foe) return;
+  const me = T.sanitize(Object.assign({}, state.draft, { id: state.draft.id || "draft", name: state.draft.name || "Your tank" }));
+  $("testStage").hidden = false;
+  play("test", [me, foe], Math.floor(Math.random() * 1e9));
+  $("testCanvas").scrollIntoView({ block: "nearest", behavior: "smooth" });
+});
+
+/* ================= battle viewer ================= */
+function play(key, tanks, seed) {
+  const canvas = $(key + "Canvas"), ctx = canvas.getContext("2d");
+  if (state.viewers[key]) cancelAnimationFrame(state.viewers[key].raf);
+  const S = T.create(tanks, seed);
+  canvas.width = S.w; canvas.height = S.h;
+  const v = state.viewers[key] = { S, speed: (state.viewers[key] && state.viewers[key].speed) || 1, acc: 0, last: performance.now(), raf: 0 };
+  $(key + "Label").textContent = tanks.length === 2 ? tanks[0].name + " vs " + tanks[1].name : tanks.length + " tanks";
+  $(key + "Result").textContent = "";
+  const sp = $(key + "Speed");
+  sp.textContent = "";
+  [1, 2, 4].forEach((n) => {
+    const b = el("button", "btn mono", n + "×");
+    b.type = "button"; b.setAttribute("aria-pressed", String(v.speed === n));
+    b.addEventListener("click", () => { v.speed = n; [...sp.children].forEach((c) => c.setAttribute("aria-pressed", String(c === b))); });
+    sp.appendChild(b);
+  });
+  function frame(now) {
+    v.acc += Math.min(0.1, (now - v.last) / 1000) * v.speed; v.last = now;
+    while (v.acc >= T.DT && !S.over) { T.step(S); v.acc -= T.DT; }
+    draw(ctx, S);
+    if (!S.over) v.raf = requestAnimationFrame(frame);
+    else showResult(key, S);
+  }
+  v.raf = requestAnimationFrame(frame);
+}
+function draw(ctx, S) {
+  const css = getComputedStyle(document.documentElement), line = css.getPropertyValue("--line").trim(), text = css.getPropertyValue("--text").trim();
+  ctx.clearRect(0, 0, S.w, S.h);
+  ctx.strokeStyle = "rgba(42,90,75,.35)"; ctx.lineWidth = 1;
+  for (let x = 40; x < S.w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, S.h); ctx.stroke(); }
+  for (let y = 40; y < S.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S.w, y); ctx.stroke(); }
+  S.tanks.forEach((t) => {
+    ctx.save(); ctx.translate(t.x, t.y);
+    ctx.globalAlpha = t.alive ? 1 : 0.22;
+    ctx.save(); ctx.rotate(t.body);
+    ctx.fillStyle = t.rec.color; ctx.strokeStyle = "#04110E"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(-15, -11, 30, 22, 4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(4,17,14,.45)"; ctx.fillRect(-15, -11, 30, 4); ctx.fillRect(-15, 7, 30, 4);
+    ctx.restore();
+    ctx.save(); ctx.rotate(t.turret);
+    ctx.strokeStyle = "#04110E"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, 0); ctx.stroke();
+    ctx.strokeStyle = t.rec.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, 0); ctx.stroke();
+    ctx.fillStyle = t.rec.color; ctx.strokeStyle = "#04110E"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 6.283); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    if (t.alive) {
+      ctx.fillStyle = "rgba(4,17,14,.8)"; ctx.fillRect(-18, -26, 36, 5);
+      const f = t.hp / t.d.hp;
+      ctx.fillStyle = f > 0.5 ? "#7BE0A0" : f > 0.25 ? "#F4C453" : "#FF8F7A"; ctx.fillRect(-18, -26, 36 * f, 5);
+    }
+    ctx.fillStyle = text; ctx.font = "12px Sora, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(t.rec.name, 0, 34);
+    ctx.restore();
+  });
+  ctx.fillStyle = "#FFF3C4";
+  S.shells.forEach((s) => { ctx.beginPath(); ctx.arc(s.x, s.y, 2.6, 0, 6.283); ctx.fill(); });
+  ctx.fillStyle = line; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.textAlign = "left";
+  ctx.fillStyle = "rgba(147,181,165,.9)"; ctx.fillText(S.t.toFixed(1) + "s", 10, 18);
+  if (S.over) {
+    ctx.fillStyle = "rgba(7,26,22,.72)"; ctx.fillRect(0, S.h / 2 - 34, S.w, 68);
+    ctx.fillStyle = "#F4C453"; ctx.font = "600 24px Unbounded, sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(S.winner == null ? "Draw" : S.tanks[S.winner].rec.name + " wins", S.w / 2, S.h / 2 + 8);
+  }
+}
+function showResult(key, S) {
+  const ul = $(key + "Result");
+  ul.textContent = "";
+  S.ranking.forEach((i, place) => {
+    const t = S.tanks[i], li = el("li");
+    const acc = t.shots ? Math.round(t.hits / t.shots * 100) : 0;
+    li.append(el("span", "num", (place + 1) + "."), dot(t.rec.color), el("b", null, t.rec.name),
+      el("span", null, Math.round(t.dealt) + " damage · " + acc + "% hits"));
+    ul.appendChild(li);
+  });
+}
+
+/* ================= league =================
+   Every pair of tanks duels several times, and the whole field plays a set of free-for-alls.
+   Seeds come from the tanks themselves, so everyone sees the same table for the same tanks. */
+function signature() { return state.tanks.map((t) => t.id + JSON.stringify(t.stats) + JSON.stringify(t.ai)).sort().join("|"); }
+let leagueRun = 0;
+function computeLeague() {
+  const sig = signature();
+  if (sig === state.leagueSig) return;
+  state.leagueSig = sig; state.league = null;
+  const run = ++leagueRun, tanks = state.tanks.slice();
+  const rows = {};
+  tanks.forEach((t) => { rows[t.id] = { w: 0, l: 0, d: 0, place: 0, ffa: 0, ffaWins: 0 }; });
+  const jobs = [];
+  for (let i = 0; i < tanks.length; i++) for (let j = i + 1; j < tanks.length; j++) for (let k = 0; k < LEAGUE_ROUNDS; k++) jobs.push([i, j, k]);
+  for (let k = 0; k < FFA_RUNS; k++) jobs.push([-1, -1, k]);
+  const total = jobs.length;
+  function chunk() {
+    if (run !== leagueRun) return;
+    const stop = performance.now() + 14;
+    while (jobs.length && performance.now() < stop) {
+      const [i, j, k] = jobs.pop();
+      if (i >= 0) {
+        const a = k % 2 ? tanks[j] : tanks[i], b = k % 2 ? tanks[i] : tanks[j];   // swap sides each round
+        const S = T.run([a, b], T.hash(tanks[i].id + "|" + tanks[j].id + "|" + k));
+        if (S.winner == null) { rows[a.id].d++; rows[b.id].d++; }
+        else { rows[(S.winner === 0 ? a : b).id].w++; rows[(S.winner === 0 ? b : a).id].l++; }
+      } else {
+        let field = tanks;
+        if (tanks.length > FFA_MAX) {     // big leagues: each free-for-all draws a different dozen
+          const order = tanks.map((t) => [T.hash(t.id + "#" + k), t]).sort((x, y) => x[0] - y[0]);
+          field = order.slice(0, FFA_MAX).map((x) => x[1]);
+        }
+        const S = T.run(field, T.hash("ffa" + k + sig.length));
+        S.ranking.forEach((idx, place) => { const r = rows[field[idx].id]; r.place += place + 1; r.ffa++; if (place === 0 && S.winner != null) r.ffaWins++; });
+      }
+    }
+    if (jobs.length) { $("leagueNote").textContent = "Running battles… " + Math.round((1 - jobs.length / total) * 100) + "%"; setTimeout(chunk, 0); }
+    else { state.league = rows; renderLeague(); }
+  }
+  chunk();
+}
+function renderLeague() {
+  ["duelA", "duelB"].forEach((id, n) => {
+    const sel = $(id), keep = sel.value;
+    sel.textContent = "";
+    state.tanks.forEach((t) => sel.appendChild(new Option(t.name + " (" + t.owner + ")", t.id)));
+    if (keep && byId(keep)) sel.value = keep; else if (state.tanks[n]) sel.value = state.tanks[n].id;
+  });
+  computeLeague();
+  const table = $("table");
+  if (!state.league) return;
+  table.textContent = "";
+  const rows = state.league, duels = (state.tanks.length - 1) * LEAGUE_ROUNDS;
+  $("leagueNote").textContent = state.tanks.length + " tanks. Each pair duels " + LEAGUE_ROUNDS + " times, plus " + FFA_RUNS + " free-for-alls. The table updates whenever a tank changes.";
+  const head = el("tr");
+  [["#", ""], ["Tank", ""], ["Player", ""], ["Build", ""], ["Won", "r"], ["Lost", "r"], ["Drew", "r"], ["Win rate", "r"], ["Free-for-all wins", "r"], ["Avg place", "r"]].forEach(([t, c]) => head.appendChild(el("th", c, t)));
+  table.appendChild(head);
+  const rate = (r) => duels ? (r.w + r.d / 2) / duels : 0;
+  state.tanks.filter((t) => rows[t.id]).sort((a, b) => rate(rows[b.id]) - rate(rows[a.id]) || rows[a.id].place - rows[b.id].place).forEach((t, n) => {
+    const r = rows[t.id], tr = el("tr", t.owner === state.player ? "me" : "");
+    const name = el("td"); name.append(dot(t.color), t.name);
+    tr.append(el("td", "num", String(n + 1)), name, el("td", null, t.owner),
+      el("td", "build num", T.STATS.map((k) => t.stats[k]).join(" · ")),
+      el("td", "r num", String(r.w)), el("td", "r num", String(r.l)), el("td", "r num", String(r.d)),
+      el("td", "r num", Math.round(rate(r) * 100) + "%"), el("td", "r num", String(r.ffaWins)),
+      el("td", "r num", r.ffa ? (r.place / r.ffa).toFixed(1) : "–"));
+    table.appendChild(tr);
+  });
+}
+$("watch").addEventListener("click", () => {
+  const a = byId($("duelA").value), b = byId($("duelB").value);
+  if (!a || !b || a.id === b.id) { $("leagueNote").textContent = "Pick two different tanks to watch."; return; }
+  $("duelStage").hidden = false;
+  play("duel", [a, b], Math.floor(Math.random() * 1e9));
+});
+
+/* ================= free-for-all ================= */
+$("startArena").addEventListener("click", () => {
+  let field = state.tanks.slice();
+  const seed = Math.floor(Math.random() * 1e9);
+  if (field.length > FFA_MAX) field = field.map((t) => [T.hash(t.id + seed), t]).sort((a, b) => a[0] - b[0]).slice(0, FFA_MAX).map((x) => x[1]);
+  play("arena", field, seed);
+  $("startArena").textContent = "Start another";
+});
+
+/* ================= views ================= */
+function showView() {
+  const view = ["garage", "league", "arena"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "garage";
+  ["garage", "league", "arena"].forEach((v) => { $("view-" + v).hidden = v !== view; });
+  document.querySelectorAll(".tabs a").forEach((a) => { if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+  if (view === "league") renderLeague();
+}
+addEventListener("hashchange", showView);
+
+(async function start() {
+  const notice = $("notice");
+  try { state.tanks = await Store.list(); }
+  catch (err) {
+    state.tanks = (CFG.house || []).map(T.sanitize);
+    notice.hidden = false;
+    notice.textContent = "The shared tank list couldn't be loaded, so only the house tanks are showing. Try refreshing in a moment.";
+  }
+  if (!Store.remote) {
+    notice.hidden = false;
+    notice.append(el("b", null, "Shared saving isn't switched on yet. "), "For now your tanks are saved in this browser only, so other players can't see them. The house tanks are here to fight in the meantime.");
+  }
+  renderPlayers();
+  if (state.player) openDraft(state.tanks.find((t) => t.owner === state.player) || null); else openDraft(null);
+  showView();
+})();
+</script>
+</body>
+</html>
