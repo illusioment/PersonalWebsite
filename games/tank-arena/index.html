@@ -6,23 +6,30 @@
 <title>Tank Arena</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
-/* Same greenhouse-control-room tokens as the hub. Layout: player bar, three views
-   (Garage, League, Free-for-all). The battle canvas is the one loud element. */
+/* Tank Arena has its own look: a neon grid world. Cyan for the system, orange for
+   action, each tank in its own light colour. Layout: player bar, four views; the
+   battle canvas is the loud element and everything else stays dark and thin-lined. */
 :root {
-  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
-  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A; --floor: #0A211C;
-  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
-  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --bg: #02060E; --panel: #06101D; --line: #13456E; --text: #DDF6FF; --muted: #74A3BF;
+  --leaf: #00E5FF;   /* system cyan */
+  --sun: #FF9A1F;    /* action orange */
+  --down: #FF3D71; --floor: #020810;
+  --font-display: "Orbitron", "Trebuchet MS", sans-serif;
+  --font-body: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, Menlo, monospace;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.5;
-  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%);
+  font-family: var(--font-body); font-weight: 500; font-size: 17px; line-height: 1.45;
+  background-image:
+    linear-gradient(rgba(0, 229, 255, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 229, 255, .045) 1px, transparent 1px),
+    radial-gradient(900px 480px at 50% -10%, rgba(0, 229, 255, .12), transparent 70%);
+  background-size: 44px 44px, 44px 44px, auto;
   background-attachment: fixed;
 }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
@@ -37,41 +44,41 @@ button { cursor: pointer; }
 .top a { color: var(--muted); text-decoration: none; }
 .top a:hover { color: var(--leaf); }
 .player { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--muted); }
-select, input[type="text"] { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-size: 14.5px; color: var(--text); }
+select, input[type="text"] { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 8px 16px; font-size: 14.5px; color: var(--text); }
 input[type="text"]::placeholder { color: var(--muted); }
 
-h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 4.6vw, 46px); line-height: 1.1; letter-spacing: .08em; text-transform: uppercase; margin: 40px 0 12px; color: var(--leaf); text-shadow: 0 0 18px rgba(0, 229, 255, .55); }
 .lede { color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
-h2 { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 0 0 12px; }
+h2 { font-family: var(--font-display); font-weight: 500; font-size: 15px; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 12px; color: var(--leaf); }
 
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-.btn { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; color: var(--muted); text-decoration: none; display: inline-block; }
-.btn:hover, .btn[aria-pressed="true"], .btn[aria-current="page"] { border-color: var(--leaf); color: var(--leaf); }
-.btn.primary { background: var(--sun); border-color: var(--sun); color: #1A1400; font-weight: 600; }
-.btn.primary:hover { filter: brightness(1.1); color: #1A1400; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 8px 18px; color: var(--muted); text-decoration: none; display: inline-block; }
+.btn:hover, .btn[aria-pressed="true"], .btn[aria-current="page"] { border-color: var(--leaf); color: var(--leaf); box-shadow: 0 0 12px rgba(0, 229, 255, .35), inset 0 0 12px rgba(0, 229, 255, .08); }
+.btn.primary { background: var(--sun); border-color: var(--sun); color: #160A00; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 0 16px rgba(255, 154, 31, .45); }
+.btn.primary:hover { filter: brightness(1.12); color: #160A00; border-color: var(--sun); box-shadow: 0 0 22px rgba(255, 154, 31, .7); }
 .btn.danger.armed { background: var(--down); border-color: var(--down); color: #1A0500; }
 .btn:disabled { opacity: .4; cursor: default; }
 
-.notice { margin-bottom: 24px; padding: 14px 20px; border: 1px solid var(--line); border-radius: 14px; color: var(--muted); font-size: 14.5px; }
+.notice { margin-bottom: 24px; padding: 14px 20px; border: 1px solid var(--line); border-radius: 6px; background: rgba(6, 16, 29, .88); color: var(--muted); font-size: 14.5px; }
 .notice b { color: var(--text); font-weight: 600; }
 .msg { min-height: 22px; color: var(--sun); font-size: 14.5px; margin: 12px 0 0; }
 
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+.panel { background: rgba(6, 16, 29, .88); border: 1px solid var(--line); border-radius: 6px; padding: 20px; min-width: 0; box-shadow: 0 0 0 1px rgba(0, 229, 255, .05), 0 0 28px rgba(0, 229, 255, .06); }
 .garage { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 16px; align-items: start; }
 .mine { display: flex; flex-direction: column; gap: 8px; }
-.tankbtn { width: 100%; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: center; }
+.tankbtn { width: 100%; text-align: left; background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 10px; align-items: center; }
 .tankbtn:hover, .tankbtn[aria-pressed="true"] { border-color: var(--sun); }
 .tankbtn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dot { width: 14px; height: 14px; border-radius: 4px; display: inline-block; flex: none; }
+.dot { width: 14px; height: 14px; border-radius: 2px; display: inline-block; flex: none; box-shadow: 0 0 8px currentColor; }
 .empty { color: var(--muted); font-size: 14.5px; margin: 0 0 8px; }
 
 .fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-bottom: 20px; }
 .fields input[type="text"] { flex: 1; min-width: 0; }
 .swatches { display: flex; gap: 6px; align-items: center; }
-.swatch { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; padding: 0; }
+.swatch { width: 28px; height: 28px; border-radius: 3px; border: 2px solid transparent; padding: 0; }
 .swatch[aria-pressed="true"] { border-color: var(--text); }
 .budget { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.budget .track { flex: 1; height: 8px; border-radius: 4px; background: rgba(42, 90, 75, .5); overflow: hidden; }
+.budget .track { flex: 1; height: 8px; border-radius: 1px; background: rgba(19, 69, 110, .6); overflow: hidden; }
 .budget .fill { height: 100%; background: var(--sun); border-radius: 4px; transition: width .15s; }
 .budget strong { font-weight: 400; color: var(--sun); white-space: nowrap; }
 .stat { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px 150px; gap: 12px; align-items: center; padding: 7px 0; }
@@ -90,16 +97,22 @@ input[type="range"] { width: 100%; accent-color: var(--sun); margin: 0; }
 .stage { margin-top: 16px; }
 .stage-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .stage-bar .spacer { flex: 1; }
-canvas.field { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
+canvas.field { display: block; width: 100%; height: auto; border-radius: 4px; background: var(--floor); border: 1px solid var(--leaf); box-shadow: 0 0 24px rgba(0, 229, 255, .25); }
 .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; margin-bottom: 12px; }
 .rrow { display: grid; grid-template-columns: 14px minmax(0, 1fr) 70px 22px; gap: 8px; align-items: center; font-size: 13.5px; }
 .rrow.out { opacity: .4; text-decoration: line-through; }
 .rname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rbar { height: 6px; border-radius: 3px; background: rgba(42, 90, 75, .5); overflow: hidden; }
+.rbar { height: 6px; border-radius: 1px; background: rgba(19, 69, 110, .6); overflow: hidden; }
 .rfill { height: 100%; border-radius: 3px; transition: width .12s linear; }
 .rk { color: var(--sun); font-size: 12px; }
 .stage-bar #testSpeed, .stage-bar #duelSpeed, .stage-bar #arenaSpeed { display: flex; flex-wrap: wrap; gap: 6px; }
-.preview { width: 96px; height: 72px; flex: none; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
+.preview { width: 96px; height: 72px; flex: none; border-radius: 4px; background: var(--floor); border: 1px solid var(--line); }
+.pad { display: none; gap: 8px; margin-top: 12px; justify-content: space-between; touch-action: none; user-select: none; }
+.pad div { display: flex; gap: 8px; }
+.pad .btn { min-width: 58px; min-height: 52px; font-size: 18px; touch-action: none; }
+@media (pointer: coarse) { .pad { display: flex; } }
+.help { color: var(--muted); font-size: 15px; margin: 12px 0 0; }
+.help kbd { font-family: var(--font-mono); font-size: 12.5px; border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; color: var(--text); }
 .result { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 14.5px; }
 .result li { display: flex; align-items: center; gap: 8px; }
 .result b { color: var(--text); font-weight: 600; }
@@ -107,11 +120,11 @@ canvas.field { display: block; width: 100%; height: auto; border-radius: 10px; b
 .tablewrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 th { text-align: left; font-weight: 400; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
-td { padding: 11px 12px 11px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); white-space: nowrap; }
+td { padding: 11px 12px 11px 0; border-bottom: 1px solid rgba(19, 69, 110, .6); white-space: nowrap; }
 tr:last-child td { border-bottom: 0; }
 th.r, td.r { text-align: right; padding-right: 0; padding-left: 12px; }
 td .dot { vertical-align: -2px; margin-right: 8px; }
-tr.me td { background: rgba(244, 196, 83, .07); }
+tr.me td { background: rgba(0, 229, 255, .07); }
 .build { color: var(--muted); font-size: 12.5px; letter-spacing: .04em; }
 .pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 0; }
 
@@ -138,12 +151,13 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
   </header>
 
   <h1>Tank Arena</h1>
-  <p class="lede">Every tank gets the same 30 points. Spend them your way, save your tank, and it fights everyone else's in the league. Come back, see what beat you, and retune.</p>
+  <p class="lede">Every tank gets the same 30 points. Spend them your way, save your tank, and it fights everyone else's on the grid. Come back, see what beat you, and retune. Or take the controls and drive it yourself.</p>
 
   <nav class="tabs" aria-label="Views">
     <a class="btn mono" href="#garage" data-view="garage">Garage</a>
     <a class="btn mono" href="#league" data-view="league">League</a>
     <a class="btn mono" href="#arena" data-view="arena">Free-for-all</a>
+    <a class="btn mono" href="#drive" data-view="drive">Drive</a>
   </nav>
 
   <div class="notice" id="notice" hidden></div>
@@ -249,6 +263,31 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
     </div>
   </section>
 
+  <!-- ================= Drive (first person) ================= -->
+  <section id="view-drive" hidden>
+    <div class="panel">
+      <h2>Drive it yourself</h2>
+      <p class="empty">Climb into a tank and fight from the driver's seat. The other tanks drive themselves.</p>
+      <div class="stage-bar">
+        <label class="mono" for="driveTank" style="color: var(--muted)">Your tank</label>
+        <select id="driveTank"></select>
+        <label class="mono" for="driveFoe" style="color: var(--muted)">Against</label>
+        <select id="driveFoe"></select>
+        <button class="btn primary" id="startDrive" type="button">Start</button>
+        <span class="mono" id="driveLabel" style="color: var(--muted)"></span>
+        <span class="spacer"></span><span id="driveSpeed"></span>
+      </div>
+      <div class="roster" id="driveRoster"></div>
+      <canvas class="field" id="driveCanvas" width="960" height="540"></canvas>
+      <div class="pad" aria-label="Touch controls">
+        <div><button class="btn" type="button" data-key="left" aria-label="Aim left">◀</button><button class="btn" type="button" data-key="right" aria-label="Aim right">▶</button></div>
+        <div><button class="btn" type="button" data-key="back" aria-label="Reverse">▼</button><button class="btn" type="button" data-key="fwd" aria-label="Drive forward">▲</button><button class="btn primary" type="button" data-key="fire">Fire</button></div>
+      </div>
+      <p class="help"><kbd>W</kbd> <kbd>S</kbd> drive forward and back · <kbd>A</kbd> <kbd>D</kbd> aim (the hull follows your gun) · <kbd>Space</kbd> fire. Arrow keys work too. The gap in the crosshair is your shot spread; the ring fills as the gun reloads; the radar ring is your gun range.</p>
+      <ul class="result" id="driveResult"></ul>
+    </div>
+  </section>
+
   <footer>
     Balance: every stat point is tuned to be worth about the same, checked by running thousands of duels between random builds. No single slider wins on its own; the mix and the matchups decide.
     Player names have no password, so only edit your own tanks.
@@ -261,7 +300,7 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 const T = window.TankSim, CFG = window.TANK_CONFIG || { dbUrl: "", house: [] };
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-const COLORS = ["#7BE0A0", "#F4C453", "#FF8F7A", "#9FB8FF", "#D8A6FF", "#6FE3E1", "#FFB86B", "#F2F2F2"];
+const COLORS = ["#00E5FF", "#FF9A1F", "#FF3D71", "#7CFF6B", "#C77DFF", "#FFE94A", "#4D8BFF", "#FFFFFF"];
 const LABELS = {
   armor: ["Armor", (d) => Math.round(d.hp) + " health"],
   engine: ["Engine", (d) => Math.round(d.speed) + " speed"],
@@ -314,7 +353,7 @@ try { state.player = localStorage.getItem("tank-arena-player") || ""; } catch (e
 let msgTimer;
 function say(text) { $("msg").textContent = text; clearTimeout(msgTimer); msgTimer = setTimeout(() => { $("msg").textContent = ""; }, 5000); }
 function byId(id) { return state.tanks.find((t) => t.id === id); }
-function dot(color) { const d = el("span", "dot"); d.style.background = color; return d; }
+function dot(color) { const d = el("span", "dot"); d.style.background = color; d.style.color = color; return d; }
 
 /* ================= players ================= */
 function renderPlayers() {
@@ -419,7 +458,7 @@ function renderGarage() {
 function renderPreview() {
   const c = $("preview"), ctx = c.getContext("2d");
   ctx.clearRect(0, 0, c.width, c.height);
-  ctx.save(); ctx.translate(c.width / 2 - 8, c.height / 2); ctx.scale(2.6, 2.6);
+  ctx.save(); ctx.translate(c.width / 2 - 10, c.height / 2); ctx.scale(2.5, 2.5);
   drawTank(ctx, state.draft, -0.35, -0.1, {});
   ctx.restore();
 }
@@ -503,57 +542,68 @@ const Sound = {
       src.buffer = buf; src.connect(lp); lp.connect(gain); gain.gain.value = 0.32; src.start(now);
     } else {
       const o = c.createOscillator();
-      o.type = kind === "shot" ? "square" : "triangle";
-      const f0 = kind === "shot" ? 190 : 620, f1 = kind === "shot" ? 55 : 240, len = kind === "shot" ? 0.09 : 0.05;
+      o.type = kind === "shot" ? "sawtooth" : "triangle";
+      const f0 = kind === "shot" ? 520 : 880, f1 = kind === "shot" ? 90 : 300, len = kind === "shot" ? 0.11 : 0.05;
       o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now + len);
-      gain.gain.setValueAtTime(kind === "shot" ? 0.05 : 0.04, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + len);
+      gain.gain.setValueAtTime(kind === "shot" ? 0.045 : 0.04, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + len);
       o.connect(gain); o.start(now); o.stop(now + len);
     }
   }
 };
 Sound.init();
 
-/* ================= battle viewer ================= */
-/* Tanks are drawn from their build: more armor = bigger hull, more barrel = longer gun,
+/* ================= shared drawing helpers ================= */
+const INK = "#020A14";
+/* A tank's outline comes from its build: more armor = bigger hull, more barrel = longer gun,
    more firepower = thicker gun, more engine = wider treads. */
+function shape(stats) {
+  return { L: 25 + stats.armor, W: 17 + stats.armor * 0.75, tread: 4 + stats.engine * 0.3,
+    gunL: 13 + stats.barrel * 1.5, gunW: 3 + stats.firepower * 0.4, dome: 6 + stats.targeting * 0.25 };
+}
+function glow(ctx, color, blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+
+/* Top-down tank: dark body, neon outline. */
 function drawTank(ctx, rec, body, turret, o) {
   o = o || {};
-  const s = rec.stats, L = 25 + s.armor * 1.0, W = 17 + s.armor * 0.75, tread = 4 + s.engine * 0.3;
-  const gunL = 13 + s.barrel * 1.5, gunW = 3 + s.firepower * 0.4, dome = 6 + s.targeting * 0.25;
-  const dark = "#04110E", recoil = o.recoil || 0;
+  const g = shape(rec.stats), color = o.dead ? "#3B5266" : rec.color, recoil = o.recoil || 0;
+  ctx.lineJoin = "round"; ctx.lineWidth = 2; ctx.strokeStyle = color; ctx.fillStyle = INK;
+  glow(ctx, color, o.dead ? 0 : 12);
   ctx.save(); ctx.rotate(body);
-  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -W / 2 - tread + 4, L, W + tread * 2, 5); ctx.fill();   // shadow
-  ctx.fillStyle = "#1B2B27"; ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
   [-1, 1].forEach((side) => {
-    const y = side < 0 ? -W / 2 - tread + 1 : W / 2 - 1;
-    ctx.beginPath(); ctx.roundRect(-L / 2 - 1, y, L + 2, tread, 2); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = "rgba(228,242,230,.22)"; ctx.lineWidth = 1;
-    const shift = ((o.roll || 0) % 5 + 5) % 5;
-    for (let x = -L / 2 + shift; x < L / 2; x += 5) { ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x, y + tread - 1); ctx.stroke(); }
-    ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
+    const y = side < 0 ? -g.W / 2 - g.tread + 1 : g.W / 2 - 1;
+    ctx.beginPath(); ctx.roundRect(-g.L / 2 - 1, y, g.L + 2, g.tread, 2); ctx.fill(); ctx.stroke();
   });
-  ctx.fillStyle = rec.color; ctx.beginPath(); ctx.roundRect(-L / 2, -W / 2, L, W, 4); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,.16)"; ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -W / 2 + 2, L - 4, W * 0.32, 2); ctx.fill();
-  ctx.fillStyle = "rgba(4,17,14,.35)"; ctx.fillRect(L / 2 - 6, -W / 2 + 3, 3, W - 6);    // front marker
+  ctx.beginPath(); ctx.roundRect(-g.L / 2, -g.W / 2, g.L, g.W, 3); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.globalAlpha *= 0.5; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(g.L / 2 - 5, -g.W / 2 + 3); ctx.lineTo(g.L / 2 - 5, g.W / 2 - 3); ctx.stroke();   // front marker
+  ctx.globalAlpha *= 2; ctx.lineWidth = 2;
   ctx.restore();
   ctx.save(); ctx.rotate(turret);
-  ctx.fillStyle = "#22332F"; ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.roundRect(dome - 2 - recoil, -gunW / 2, gunL, gunW, 1.5); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = dark; ctx.fillRect(dome - 2 - recoil + gunL - 3, -gunW / 2 - 1, 3, gunW + 2);   // muzzle
-  ctx.fillStyle = rec.color; ctx.beginPath(); ctx.arc(0, 0, dome, 0, 6.283); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.beginPath(); ctx.arc(-dome * 0.25, -dome * 0.25, dome * 0.45, 0, 6.283); ctx.fill();
+  glow(ctx, color, o.dead ? 0 : 12);
+  ctx.beginPath(); ctx.roundRect(g.dome - 2 - recoil, -g.gunW / 2, g.gunL, g.gunW, 1); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, g.dome, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.shadowBlur = 0;
+  if (!o.dead) { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 6.283); ctx.fill(); }
   ctx.restore();
+  ctx.shadowBlur = 0;
 }
 
-function play(key, tanks, seed) {
+/* ================= battle viewer =================
+   opts.me: index of the tank the player drives (first-person view while it is alive). */
+const keys = { fwd: 0, back: 0, left: 0, right: 0, fire: 0 };
+let driving = null;   // the viewer currently taking keyboard input
+
+function play(key, tanks, seed, opts) {
+  opts = opts || {};
   const canvas = $(key + "Canvas"), ctx = canvas.getContext("2d");
   if (state.viewers[key]) cancelAnimationFrame(state.viewers[key].raf);
   Sound.wake();
   const S = T.create(tanks, seed);
-  canvas.width = S.w; canvas.height = S.h;
-  const ground = document.createElement("canvas");   // scorch marks and tread tracks build up here
-  ground.width = S.w; ground.height = S.h;
-  const v = state.viewers[key] = { S, ground, gctx: ground.getContext("2d"), fx: [], shake: 0, clock: 0, speed: (state.viewers[key] && state.viewers[key].speed) || 1, acc: 0, last: performance.now(), raf: 0, shown: S.tanks.map((t) => t.hp) };
+  const v = state.viewers[key] = { key, S, me: opts.me == null ? null : opts.me, fx: [], feed: [], shake: 0, hurt: 0, kick: 0,
+    trails: S.tanks.map(() => []), shown: S.tanks.map((t) => t.hp),
+    speed: opts.me != null ? 1 : (state.viewers[key] && state.viewers[key].speed) || 1, acc: 0, last: performance.now(), raf: 0 };
+  v.ground = document.createElement("canvas"); v.ground.width = S.w; v.ground.height = S.h; v.gctx = v.ground.getContext("2d");
+  if (v.me != null) { S.tanks[v.me].input = { fwd: 0, turn: 0, fire: false }; driving = v; Object.keys(keys).forEach((k) => { keys[k] = 0; }); }
   $(key + "Label").textContent = tanks.length === 2 ? tanks[0].name + " vs " + tanks[1].name : tanks.length + " tanks";
   $(key + "Result").textContent = "";
   buildControls(key, v);
@@ -562,141 +612,324 @@ function play(key, tanks, seed) {
   function frame(now) {
     const real = Math.min(0.1, (now - v.last) / 1000); v.last = now;
     v.acc += real * v.speed;
+    const me = v.me != null ? S.tanks[v.me] : null;
     let ticks = 0;
-    while (v.acc >= T.DT && !S.over && ticks < 12) { T.step(S); v.acc -= T.DT; ticks++; absorb(v); }
-    v.clock += real * v.speed;
-    render(ctx, v, real * v.speed);
+    while (v.acc >= T.DT && !S.over && ticks < 12) {
+      if (me && me.alive) { me.input.fwd = keys.fwd - keys.back; me.input.turn = keys.right - keys.left; me.input.fire = !!keys.fire; }
+      T.step(S); v.acc -= T.DT; ticks++; absorb(v);
+    }
+    const dt = real * v.speed, fp = me && (me.alive || S.over && S.winner === v.me);
+    if (fp) { if (canvas.width !== 960) { canvas.width = 960; canvas.height = 540; } renderFP(ctx, v, dt); }
+    else { if (canvas.width !== S.w) { canvas.width = S.w; canvas.height = S.h; } render(ctx, v, dt); }
     updateRoster(key, v);
     if (!S.over || v.fx.length) v.raf = requestAnimationFrame(frame);
-    if (S.over && !v.done) { v.done = true; showResult(key, S); }
+    if (S.over && !v.done) { v.done = true; if (driving === v) driving = null; showResult(key, S); }
   }
   v.raf = requestAnimationFrame(frame);
 }
 
-/* Turn this tick's simulation events into particles, marks and sound. */
+/* Turn this tick's simulation events into particles, trails and sound. */
 function absorb(v) {
   const S = v.S, fx = v.fx, rnd = Math.random;
-  S.tanks.forEach((t) => {
+  S.tanks.forEach((t, i) => {
     if (!t.alive) return;
-    if (Math.hypot(t.vx, t.vy) > 8 && rnd() < 0.5) {
-      v.gctx.save(); v.gctx.translate(t.x, t.y); v.gctx.rotate(t.body);
-      v.gctx.fillStyle = "rgba(4,17,14,.16)"; v.gctx.fillRect(-14, -13, 3, 4); v.gctx.fillRect(-14, 9, 3, 4);
-      v.gctx.restore();
-    }
-    if (t.hp / t.d.hp < 0.4 && rnd() < 0.35) fx.push({ k: "smoke", x: t.x + (rnd() - .5) * 8, y: t.y + (rnd() - .5) * 8, vx: (rnd() - .5) * 10, vy: -14 - rnd() * 10, life: 0.9, max: 0.9, r: 4 + rnd() * 3 });
+    const tr = v.trails[i], last = tr[tr.length - 1];
+    if (!last || Math.hypot(t.x - last.x, t.y - last.y) > 5) { tr.push({ x: t.x, y: t.y }); if (tr.length > 46) tr.shift(); }
+    if (t.hp / t.d.hp < 0.35 && rnd() < 0.3) fx.push({ k: "spark", color: t.rec.color, x: t.x + (rnd() - .5) * 14, y: t.y + (rnd() - .5) * 14, z: 12, vx: (rnd() - .5) * 60, vy: (rnd() - .5) * 60, vz: 30 + rnd() * 30, life: 0.3, max: 0.3 });
   });
   S.events.forEach((e) => {
     if (e.type === "shot") {
-      fx.push({ k: "flash", x: e.x, y: e.y, a: e.a, life: 0.09, max: 0.09 });
+      fx.push({ k: "flash", x: e.x, y: e.y, z: 12, a: e.a, color: S.tanks[e.by].rec.color, life: 0.09, max: 0.09 });
+      if (e.by === v.me) v.kick = 1;
       Sound.play("shot");
     } else if (e.type === "hit") {
-      for (let i = 0; i < 7; i++) { const a = rnd() * 6.283, sp = 40 + rnd() * 110; fx.push({ k: "spark", x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.25 + rnd() * 0.2, max: 0.45 }); }
-      fx.push({ k: "num", x: e.x, y: e.y - 14, vy: -26, life: 0.7, max: 0.7, text: "-" + Math.round(e.dmg) });
+      const color = S.tanks[e.on].rec.color;
+      for (let i = 0; i < 8; i++) { const a = rnd() * 6.283, sp = 40 + rnd() * 120; fx.push({ k: "spark", color, x: e.x, y: e.y, z: 11, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 20 + rnd() * 60, life: 0.25 + rnd() * 0.2, max: 0.45 }); }
+      fx.push({ k: "num", x: e.x, y: e.y - 14, z: 26, vy: -26, life: 0.7, max: 0.7, text: "-" + Math.round(e.dmg) });
+      if (e.on === v.me) v.hurt = 0.35;
       Sound.play("hit");
     } else if (e.type === "dead") {
-      const color = S.tanks[e.on].rec.color;
-      fx.push({ k: "ring", x: e.x, y: e.y, life: 0.45, max: 0.45 });
-      for (let i = 0; i < 26; i++) { const a = rnd() * 6.283, sp = 50 + rnd() * 200; fx.push({ k: "debris", x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 + rnd() * 0.5, max: 1, color: i % 3 ? "#F4C453" : color, r: 2 + rnd() * 3 }); }
-      for (let i = 0; i < 8; i++) fx.push({ k: "smoke", x: e.x + (rnd() - .5) * 20, y: e.y + (rnd() - .5) * 20, vx: (rnd() - .5) * 20, vy: -18 - rnd() * 16, life: 1.3, max: 1.3, r: 8 + rnd() * 8 });
-      const g = v.gctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, 34);
-      g.addColorStop(0, "rgba(0,0,0,.6)"); g.addColorStop(1, "rgba(0,0,0,0)");
-      v.gctx.fillStyle = g; v.gctx.beginPath(); v.gctx.arc(e.x, e.y, 34, 0, 6.283); v.gctx.fill();
+      const dead = S.tanks[e.on], color = dead.rec.color;
+      fx.push({ k: "ring", color, x: e.x, y: e.y, z: 1, life: 0.6, max: 0.6 });
+      for (let i = 0; i < 34; i++) { const a = rnd() * 6.283, sp = 40 + rnd() * 210; fx.push({ k: "debris", color: i % 4 ? color : "#FFFFFF", x: e.x, y: e.y, z: 8 + rnd() * 8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, vz: 40 + rnd() * 120, life: 0.6 + rnd() * 0.6, max: 1.2, r: 2 + rnd() * 3 }); }
+      const g = v.gctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, 36);
+      g.addColorStop(0, "rgba(0,0,0,.7)"); g.addColorStop(1, "rgba(0,0,0,0)");
+      v.gctx.fillStyle = g; v.gctx.beginPath(); v.gctx.arc(e.x, e.y, 36, 0, 6.283); v.gctx.fill();
       v.shake = 0.3;
+      v.feed.push({ text: S.tanks[e.by].rec.name + " derezzed " + dead.rec.name, color: S.tanks[e.by].rec.color, life: 4 });
+      if (v.feed.length > 4) v.feed.shift();
       Sound.play("boom");
     }
   });
-  if (fx.length > 600) fx.splice(0, fx.length - 600);
+  if (fx.length > 700) fx.splice(0, fx.length - 700);
 }
-
-function render(ctx, v, dt) {
-  const S = v.S;
-  ctx.save();
-  ctx.clearRect(0, 0, S.w, S.h);
-  if (v.shake > 0) { v.shake -= dt; const m = v.shake * 22; ctx.translate((Math.random() - .5) * m, (Math.random() - .5) * m); }
-
-  // floor
-  ctx.strokeStyle = "rgba(42,90,75,.28)"; ctx.lineWidth = 1;
-  for (let x = 40; x < S.w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, S.h); ctx.stroke(); }
-  for (let y = 40; y < S.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S.w, y); ctx.stroke(); }
-  ctx.strokeStyle = "rgba(244,196,83,.25)"; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, S.w - 3, S.h - 3);
-  ctx.drawImage(v.ground, 0, 0);
-
-  // wrecks first, then living tanks on top
-  S.tanks.slice().sort((a, b) => a.alive - b.alive).forEach((t) => {
-    ctx.save(); ctx.translate(t.x, t.y);
-    if (!t.alive) {
-      ctx.globalAlpha = 0.5; ctx.filter = "grayscale(1) brightness(.5)";
-      drawTank(ctx, t.rec, t.body, t.turret + 0.5, {});
-      ctx.restore(); return;
-    }
-    const since = S.t - (t.fired == null ? -9 : t.fired);
-    drawTank(ctx, t.rec, t.body, t.turret, { recoil: since < 0.14 ? (1 - since / 0.14) * 5 : 0, roll: (t.x + t.y) * 0.7 });
-    ctx.restore();
-  });
-
-  // shells with trails
-  S.shells.forEach((s) => {
-    const tx = s.x - Math.cos(s.a) * 16, ty = s.y - Math.sin(s.a) * 16;
-    const g = ctx.createLinearGradient(tx, ty, s.x, s.y);
-    g.addColorStop(0, "rgba(255,243,196,0)"); g.addColorStop(1, "rgba(255,243,196,.9)");
-    ctx.strokeStyle = g; ctx.lineWidth = 2.6; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(s.x, s.y); ctx.stroke();
-    ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(s.x, s.y, 2.4, 0, 6.283); ctx.fill();
-  });
-
-  // effects
+function stepFx(v, dt) {
   for (let i = v.fx.length - 1; i >= 0; i--) {
     const p = v.fx[i];
     p.life -= dt;
     if (p.life <= 0) { v.fx.splice(i, 1); continue; }
-    const f = p.life / p.max;
     if (p.vx != null) { p.x += p.vx * dt; p.vx *= 0.94; }
-    if (p.vy != null) { p.y += p.vy * dt; if (p.k !== "num" && p.k !== "smoke") p.vy *= 0.94; }
-    if (p.k === "flash") {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = f;
-      ctx.fillStyle = "#FFF3C4"; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(16, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#F4C453"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 6.283); ctx.fill(); ctx.restore();
-    } else if (p.k === "spark") {
-      ctx.globalAlpha = f; ctx.fillStyle = "#FFE08A"; ctx.fillRect(p.x - 1.2, p.y - 1.2, 2.4, 2.4); ctx.globalAlpha = 1;
-    } else if (p.k === "debris") {
-      ctx.globalAlpha = Math.min(1, f * 1.4); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); ctx.globalAlpha = 1;
-    } else if (p.k === "smoke") {
-      ctx.globalAlpha = f * 0.32; ctx.fillStyle = "#9AA8A3"; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1.6 - f * 0.6), 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
-    } else if (p.k === "ring") {
-      ctx.globalAlpha = f; ctx.strokeStyle = "#FFF3C4"; ctx.lineWidth = 5 * f + 1;
-      ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 64 + 8, 0, 6.283); ctx.stroke();
-      ctx.fillStyle = "rgba(244,196,83," + (f * 0.55).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 40 + 6, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
-    } else if (p.k === "num") {
-      ctx.globalAlpha = Math.min(1, f * 2); ctx.fillStyle = "#FF8F7A"; ctx.font = "600 13px 'IBM Plex Mono', monospace"; ctx.textAlign = "center";
-      ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha = 1;
-    }
+    if (p.vy != null) { p.y += p.vy * dt; if (p.k !== "num") p.vy *= 0.94; }
+    if (p.vz != null) { p.z += p.vz * dt; p.vz -= 260 * dt; if (p.z < 0) { p.z = 0; p.vz *= -0.4; } }
   }
+  v.feed.forEach((f) => { f.life -= dt; });
+  v.feed = v.feed.filter((f) => f.life > 0);
+}
+
+/* ---------- top-down view ---------- */
+function render(ctx, v, dt) {
+  const S = v.S;
+  stepFx(v, dt);
+  ctx.save();
+  ctx.fillStyle = "#020810"; ctx.fillRect(0, 0, S.w, S.h);
+  if (v.shake > 0) { v.shake -= dt; const m = v.shake * 22; ctx.translate((Math.random() - .5) * m, (Math.random() - .5) * m); }
+
+  // grid floor
+  ctx.lineWidth = 1;
+  for (let x = 40; x < S.w; x += 40) { ctx.strokeStyle = (x / 40) % 4 ? "rgba(0,229,255,.08)" : "rgba(0,229,255,.2)"; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, S.h); ctx.stroke(); }
+  for (let y = 40; y < S.h; y += 40) { ctx.strokeStyle = (y / 40) % 4 ? "rgba(0,229,255,.08)" : "rgba(0,229,255,.2)"; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S.w, y); ctx.stroke(); }
+  glow(ctx, "#FF9A1F", 14); ctx.strokeStyle = "#FF9A1F"; ctx.lineWidth = 3; ctx.strokeRect(2, 2, S.w - 4, S.h - 4); ctx.shadowBlur = 0;
+  ctx.drawImage(v.ground, 0, 0);
+
+  // light trails
+  ctx.lineCap = "round";
+  S.tanks.forEach((t, i) => {
+    const tr = v.trails[i];
+    if (!t.alive && tr.length) { tr.splice(0, 2); }       // a dead tank's trail burns away
+    for (let k = 1; k < tr.length; k++) {
+      ctx.globalAlpha = (k / tr.length) * 0.55; ctx.strokeStyle = t.rec.color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(tr[k - 1].x, tr[k - 1].y); ctx.lineTo(tr[k].x, tr[k].y); ctx.stroke();
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  // wrecks first, then living tanks on top
+  S.tanks.slice().sort((a, b) => a.alive - b.alive).forEach((t) => {
+    ctx.save(); ctx.translate(t.x, t.y);
+    if (!t.alive) { ctx.globalAlpha = 0.6; drawTank(ctx, t.rec, t.body, t.turret + 0.5, { dead: true }); ctx.restore(); return; }
+    const since = S.t - (t.fired == null ? -9 : t.fired);
+    drawTank(ctx, t.rec, t.body, t.turret, { recoil: since < 0.14 ? (1 - since / 0.14) * 5 : 0 });
+    ctx.restore();
+  });
+
+  // shells in their owner's colour
+  S.shells.forEach((s) => {
+    const color = S.tanks[s.from].rec.color, tx = s.x - Math.cos(s.a) * 18, ty = s.y - Math.sin(s.a) * 18;
+    glow(ctx, color, 10); ctx.strokeStyle = color; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(s.x, s.y); ctx.stroke();
+    ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(s.x, s.y, 2.2, 0, 6.283); ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  // effects
+  v.fx.forEach((p) => {
+    const f = p.life / p.max;
+    if (p.k === "flash") {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = f; glow(ctx, p.color, 14);
+      ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(18, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill(); ctx.restore();
+    } else if (p.k === "spark") {
+      ctx.globalAlpha = f; ctx.fillStyle = p.color; ctx.fillRect(p.x - 1.3, p.y - 1.3 - p.z * 0.15, 2.6, 2.6);
+    } else if (p.k === "debris") {
+      ctx.globalAlpha = Math.min(1, f * 1.4); ctx.strokeStyle = p.color; ctx.lineWidth = 1.2; ctx.strokeRect(p.x - p.r, p.y - p.r - p.z * 0.15, p.r * 2, p.r * 2);
+    } else if (p.k === "ring") {
+      ctx.globalAlpha = f; glow(ctx, p.color, 16); ctx.strokeStyle = p.color; ctx.lineWidth = 4 * f + 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 70 + 8, 0, 6.283); ctx.stroke();
+      ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 44 + 4, 0, 6.283); ctx.stroke();
+    } else if (p.k === "num") {
+      ctx.globalAlpha = Math.min(1, f * 2); ctx.fillStyle = "#FF3D71"; ctx.font = "600 14px 'Share Tech Mono', monospace"; ctx.textAlign = "center";
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  });
 
   // name tags and health bars above everything
   S.tanks.forEach((t, i) => {
     if (!t.alive) return;
     v.shown[i] += (t.hp - v.shown[i]) * Math.min(1, dt * 6);       // the pale bar trails behind recent damage
     const f = t.hp / t.d.hp, g = Math.max(f, v.shown[i] / t.d.hp), w = 40, x = t.x - w / 2, y = t.y - 34;
-    ctx.fillStyle = "rgba(4,17,14,.85)"; ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, 7, 3); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(x, y, w * g, 5);
-    ctx.fillStyle = f > 0.5 ? "#7BE0A0" : f > 0.25 ? "#F4C453" : "#FF8F7A"; ctx.fillRect(x, y, w * f, 5);
-    ctx.font = "600 12px Sora, sans-serif"; ctx.textAlign = "center";
-    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,17,14,.9)"; ctx.strokeText(t.rec.name, t.x, y - 6);
-    ctx.fillStyle = "#E4F2E6"; ctx.fillText(t.rec.name, t.x, y - 6);
+    ctx.fillStyle = "rgba(2,8,16,.9)"; ctx.fillRect(x - 1, y - 1, w + 2, 6);
+    ctx.fillStyle = "rgba(255,255,255,.6)"; ctx.fillRect(x, y, w * g, 4);
+    ctx.fillStyle = t.rec.color; ctx.fillRect(x, y, w * f, 4);
+    ctx.font = "600 12px Rajdhani, sans-serif"; ctx.textAlign = "center";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(2,8,16,.9)"; ctx.strokeText(t.rec.name.toUpperCase(), t.x, y - 6);
+    ctx.fillStyle = (v.me === i) ? "#FFFFFF" : "#DDF6FF"; ctx.fillText(t.rec.name.toUpperCase(), t.x, y - 6);
   });
   ctx.restore();
 
-  ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "rgba(147,181,165,.9)";
-  ctx.fillText(S.t.toFixed(1) + "s", 12, 20);
-  if (S.over) {
-    ctx.fillStyle = "rgba(7,26,22,.78)"; ctx.fillRect(0, S.h / 2 - 44, S.w, 88);
-    ctx.fillStyle = "rgba(244,196,83,.6)"; ctx.fillRect(0, S.h / 2 - 44, S.w, 2); ctx.fillRect(0, S.h / 2 + 42, S.w, 2);
-    const win = S.winner == null ? null : S.tanks[S.winner];
-    ctx.textAlign = "center"; ctx.fillStyle = "#F4C453"; ctx.font = "600 26px Unbounded, sans-serif";
-    ctx.fillText(win ? win.rec.name + " wins" : "Draw", S.w / 2, S.h / 2 + 2);
-    ctx.fillStyle = "#93B5A5"; ctx.font = "13px Sora, sans-serif";
-    ctx.fillText(win ? "built by " + win.rec.owner + " · " + Math.round(win.hp / win.d.hp * 100) + "% health left" : "time ran out with health too close to call", S.w / 2, S.h / 2 + 26);
+  ctx.font = "13px 'Share Tech Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "rgba(116,163,191,.95)";
+  ctx.fillText(S.t.toFixed(1) + "s", 12, 22);
+  if (v.me != null && !S.tanks[v.me].alive && !S.over) { ctx.textAlign = "center"; ctx.fillStyle = "#FF3D71"; ctx.fillText("YOU WERE DEREZZED · WATCHING THE REST", S.w / 2, 22); }
+  if (S.over) banner(ctx, v, S.w, S.h);
+}
+function banner(ctx, v, w, h) {
+  const S = v.S, win = S.winner == null ? null : S.tanks[S.winner];
+  const mine = v.me != null, title = !win ? "DRAW" : mine ? (S.winner === v.me ? "YOU WIN" : "DEREZZED") : win.rec.name.toUpperCase() + " WINS";
+  const color = !win ? "#DDF6FF" : mine && S.winner !== v.me ? "#FF3D71" : win.rec.color;
+  ctx.fillStyle = "rgba(2,8,16,.82)"; ctx.fillRect(0, h / 2 - 48, w, 96);
+  glow(ctx, color, 16); ctx.fillStyle = color; ctx.fillRect(0, h / 2 - 48, w, 2); ctx.fillRect(0, h / 2 + 46, w, 2);
+  ctx.textAlign = "center"; ctx.font = "700 30px Orbitron, sans-serif"; ctx.fillText(title, w / 2, h / 2 + 4);
+  ctx.shadowBlur = 0; ctx.fillStyle = "#74A3BF"; ctx.font = "500 15px Rajdhani, sans-serif";
+  ctx.fillText(win ? win.rec.name + " · built by " + win.rec.owner + " · " + Math.round(win.hp / win.d.hp * 100) + "% health left" : "Time ran out with health too close to call", w / 2, h / 2 + 30);
+}
+
+/* ---------- first-person view: a wireframe world drawn line by line ---------- */
+function renderFP(ctx, v, dt) {
+  const S = v.S, me = S.tanks[v.me], W = 960, H = 540, focal = W * 0.6, camH = 12, near = 2;
+  stepFx(v, dt);
+  const yaw = me.turret, cs = Math.cos(yaw), sn = Math.sin(yaw);
+  const bob = Math.sin(S.t * 9) * Math.min(1, Math.hypot(me.vx, me.vy) / 60) * 1.2;
+  let ox = 0, oy = bob;
+  if (v.shake > 0) { v.shake -= dt; ox += (Math.random() - .5) * v.shake * 30; oy += (Math.random() - .5) * v.shake * 30; }
+  // world point -> [depth, right, up]
+  const cam = (x, y, z) => { const dx = x - me.x, dy = y - me.y; return [dx * cs + dy * sn, -dx * sn + dy * cs, z - camH]; };
+  const scr = (c) => [W / 2 + ox + c[1] / c[0] * focal, H / 2 + oy - c[2] / c[0] * focal];
+  function line(a, b) {     // a, b are world points [x, y, z]; clipped against the near plane
+    let p = cam(a[0], a[1], a[2]), q = cam(b[0], b[1], b[2]);
+    if (p[0] < near && q[0] < near) return;
+    if (p[0] < near) { const t = (near - p[0]) / (q[0] - p[0]); p = [near, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t]; }
+    if (q[0] < near) { const t = (near - q[0]) / (p[0] - q[0]); q = [near, q[1] + (p[1] - q[1]) * t, q[2] + (p[2] - q[2]) * t]; }
+    const s1 = scr(p), s2 = scr(q);
+    ctx.moveTo(s1[0], s1[1]); ctx.lineTo(s2[0], s2[1]);
   }
+  const fade = (d) => Math.max(0, Math.min(1, 1.15 - d / 620));
+
+  // sky and horizon
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#01030A"); sky.addColorStop(0.5, "#06203A"); sky.addColorStop(0.5, "#020810"); sky.addColorStop(1, "#010409");
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  glow(ctx, "#00E5FF", 18); ctx.strokeStyle = "rgba(0,229,255,.7)"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, H / 2 + oy); ctx.lineTo(W, H / 2 + oy); ctx.stroke(); ctx.shadowBlur = 0;
+
+  // floor grid, drawn in short pieces so far lines fade out
+  ctx.lineWidth = 1;
+  for (let band = 0; band < 3; band++) {
+    ctx.beginPath(); ctx.strokeStyle = "rgba(0,229,255," + [0.5, 0.26, 0.1][band] + ")";
+    const pick = (x, y) => { const d = Math.hypot(x - me.x, y - me.y); return (d < 170 ? 0 : d < 380 ? 1 : 2) === band; };
+    for (let x = 0; x <= S.w; x += 40) for (let y = 0; y < S.h; y += 80) if (pick(x, y + 40)) line([x, y, 0], [x, Math.min(S.h, y + 80), 0]);
+    for (let y = 0; y <= S.h; y += 40) for (let x = 0; x < S.w; x += 80) if (pick(x + 40, y)) line([x, y, 0], [Math.min(S.w, x + 80), y, 0]);
+    ctx.stroke();
+  }
+  // arena wall
+  glow(ctx, "#FF9A1F", 10); ctx.strokeStyle = "#FF9A1F"; ctx.lineWidth = 2; ctx.beginPath();
+  const wallH = 30, corners = [[0, 0], [S.w, 0], [S.w, S.h], [0, S.h]];
+  corners.forEach((c, i) => {
+    const n = corners[(i + 1) % 4], steps = Math.round(Math.hypot(n[0] - c[0], n[1] - c[1]) / 80);
+    for (let k = 0; k < steps; k++) {
+      const a = [c[0] + (n[0] - c[0]) * k / steps, c[1] + (n[1] - c[1]) * k / steps], b = [c[0] + (n[0] - c[0]) * (k + 1) / steps, c[1] + (n[1] - c[1]) * (k + 1) / steps];
+      line([a[0], a[1], wallH], [b[0], b[1], wallH]); line([a[0], a[1], 0], [b[0], b[1], 0]); line([a[0], a[1], 0], [a[0], a[1], wallH]);
+    }
+  });
+  ctx.stroke(); ctx.shadowBlur = 0;
+
+  // other tanks as wireframe boxes, far ones first
+  function box(cx, cy, ang, L, Wd, z0, z1) {
+    const c = Math.cos(ang), s = Math.sin(ang), pts = [[-L / 2, -Wd / 2], [L / 2, -Wd / 2], [L / 2, Wd / 2], [-L / 2, Wd / 2]].map((p) => [cx + p[0] * c - p[1] * s, cy + p[0] * s + p[1] * c]);
+    for (let i = 0; i < 4; i++) { const a = pts[i], b = pts[(i + 1) % 4]; line([a[0], a[1], z0], [b[0], b[1], z0]); line([a[0], a[1], z1], [b[0], b[1], z1]); line([a[0], a[1], z0], [a[0], a[1], z1]); }
+  }
+  const others = S.tanks.filter((t) => t !== me).sort((a, b) => Math.hypot(b.x - me.x, b.y - me.y) - Math.hypot(a.x - me.x, a.y - me.y));
+  others.forEach((t) => {
+    const d = Math.hypot(t.x - me.x, t.y - me.y), g = shape(t.rec.stats), color = t.alive ? t.rec.color : "#3B5266";
+    ctx.globalAlpha = Math.max(0.25, fade(d)); glow(ctx, color, t.alive ? 12 : 0); ctx.strokeStyle = color; ctx.lineWidth = d < 200 ? 2.2 : 1.6;
+    ctx.beginPath();
+    box(t.x, t.y, t.body, g.L + 2, g.W + g.tread * 2, 0, t.alive ? 9 : 5);
+    if (t.alive) {
+      box(t.x, t.y, t.turret, g.dome * 2, g.dome * 2, 9, 15);
+      const bx = t.x + Math.cos(t.turret) * (g.dome + g.gunL), by = t.y + Math.sin(t.turret) * (g.dome + g.gunL);
+      line([t.x + Math.cos(t.turret) * g.dome, t.y + Math.sin(t.turret) * g.dome, 12], [bx, by, 12]);
+    }
+    ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  });
+
+  // shells
+  S.shells.forEach((s) => {
+    const color = S.tanks[s.from].rec.color;
+    glow(ctx, color, 12); ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath();
+    line([s.x - Math.cos(s.a) * 16, s.y - Math.sin(s.a) * 16, 11], [s.x, s.y, 11]); ctx.stroke();
+    const c = cam(s.x, s.y, 11);
+    if (c[0] > near) { const p = scr(c), r = Math.max(1.5, 260 / c[0]); ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(p[0], p[1], Math.min(r, 9), 0, 6.283); ctx.fill(); }
+  });
+  ctx.shadowBlur = 0;
+
+  // effects
+  v.fx.forEach((p) => {
+    const f = p.life / p.max;
+    if (p.k === "ring") {
+      const r = (1 - f) * 70 + 8; ctx.globalAlpha = f; glow(ctx, p.color, 14); ctx.strokeStyle = p.color; ctx.lineWidth = 2.5; ctx.beginPath();
+      for (let k = 0; k < 20; k++) { const a = k / 20 * 6.283, b = (k + 1) / 20 * 6.283; line([p.x + Math.cos(a) * r, p.y + Math.sin(a) * r, 1], [p.x + Math.cos(b) * r, p.y + Math.sin(b) * r, 1]); }
+      ctx.stroke(); ctx.shadowBlur = 0; ctx.globalAlpha = 1; return;
+    }
+    const c = cam(p.x, p.y, p.z == null ? 10 : p.z);
+    if (c[0] <= near) return;
+    const q = scr(c), size = Math.max(1.5, Math.min(14, (p.k === "debris" ? 520 : 300) / c[0]));
+    if (p.k === "spark") { ctx.globalAlpha = f; ctx.fillStyle = p.color; ctx.fillRect(q[0] - size / 2, q[1] - size / 2, size, size); }
+    else if (p.k === "debris") { ctx.globalAlpha = Math.min(1, f * 1.4); ctx.strokeStyle = p.color; ctx.lineWidth = 1.4; ctx.strokeRect(q[0] - size, q[1] - size, size * 2, size * 2); }
+    else if (p.k === "flash") { ctx.globalAlpha = f; glow(ctx, p.color, 16); ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(q[0], q[1], Math.min(16, 900 / c[0]), 0, 6.283); ctx.fill(); }
+    else if (p.k === "num") { ctx.globalAlpha = Math.min(1, f * 2); ctx.fillStyle = "#FFFFFF"; ctx.font = "600 " + Math.round(Math.max(11, Math.min(26, 2600 / c[0]))) + "px 'Share Tech Mono', monospace"; ctx.textAlign = "center"; ctx.fillText(p.text, q[0], q[1]); }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+  });
+
+  // name and health above each living tank
+  others.forEach((t) => {
+    if (!t.alive) return;
+    const c = cam(t.x, t.y, 24);
+    if (c[0] <= near) return;
+    const p = scr(c), w = Math.max(26, Math.min(90, 5200 / c[0])), f = t.hp / t.d.hp;
+    ctx.fillStyle = "rgba(2,8,16,.85)"; ctx.fillRect(p[0] - w / 2 - 1, p[1] - 5, w + 2, 6);
+    ctx.fillStyle = t.rec.color; ctx.fillRect(p[0] - w / 2, p[1] - 4, w * f, 4);
+    ctx.font = "600 13px Rajdhani, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#DDF6FF"; ctx.fillText(t.rec.name.toUpperCase(), p[0], p[1] - 10);
+  });
+
+  // ---- your own gun and the heads-up display ----
+  v.kick = Math.max(0, v.kick - dt * 7);
+  const g = shape(me.rec.stats), gw = 20 + g.gunW * 5, gy = H - 30 + v.kick * 26 + oy;
+  glow(ctx, me.rec.color, 14); ctx.strokeStyle = me.rec.color; ctx.fillStyle = "rgba(2,10,20,.92)"; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(W / 2 - gw, H + 4); ctx.lineTo(W / 2 - gw * 0.42, gy - 96); ctx.lineTo(W / 2 + gw * 0.42, gy - 96); ctx.lineTo(W / 2 + gw, H + 4); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(W / 2 - gw * 0.42, gy - 96); ctx.lineTo(W / 2 - gw * 0.3, gy - 108); ctx.lineTo(W / 2 + gw * 0.3, gy - 108); ctx.lineTo(W / 2 + gw * 0.42, gy - 96); ctx.stroke();
+  if (v.kick > 0.6) { ctx.fillStyle = "#FFFFFF"; ctx.globalAlpha = (v.kick - 0.6) * 2.5; ctx.beginPath(); ctx.arc(W / 2, gy - 116, 34, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+  ctx.shadowBlur = 0;
+
+  // crosshair: the gap shows how much your shots can spread; the arc fills as the gun reloads
+  const gap = Math.max(8, Math.tan(me.d.spread * (1 + T.B.aimPenalty * 0.5 * Math.abs(me.input ? me.input.fwd : 0)) * 0.5) * focal);
+  const ready = me.cool <= 0, cx = W / 2, cy = H / 2;
+  ctx.strokeStyle = ready ? "#00E5FF" : "#FF9A1F"; ctx.lineWidth = 2; glow(ctx, ctx.strokeStyle, 8);
+  ctx.beginPath(); ctx.moveTo(cx - gap - 14, cy); ctx.lineTo(cx - gap, cy); ctx.moveTo(cx + gap, cy); ctx.lineTo(cx + gap + 14, cy); ctx.moveTo(cx, cy - 16); ctx.lineTo(cx, cy - 6); ctx.moveTo(cx, cy + 6); ctx.lineTo(cx, cy + 16); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 26, -Math.PI / 2, -Math.PI / 2 + 6.283 * (ready ? 1 : 1 - Math.max(0, me.cool) / me.d.cooldown)); ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // health
+  const hf = me.hp / me.d.hp;
+  ctx.font = "13px 'Share Tech Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "#74A3BF"; ctx.fillText("HULL", 24, H - 44);
+  ctx.strokeStyle = "#13456E"; ctx.lineWidth = 1; ctx.strokeRect(24, H - 36, 220, 14);
+  ctx.fillStyle = hf > 0.5 ? "#00E5FF" : hf > 0.25 ? "#FF9A1F" : "#FF3D71"; glow(ctx, ctx.fillStyle, 10); ctx.fillRect(26, H - 34, 216 * hf, 10); ctx.shadowBlur = 0;
+  ctx.fillStyle = "#DDF6FF"; ctx.fillText(Math.ceil(me.hp) + " / " + Math.round(me.d.hp), 252, H - 25);
+  ctx.fillStyle = "#74A3BF"; ctx.textAlign = "center"; ctx.fillText(S.t.toFixed(1) + "s  ·  " + S.tanks.filter((t) => t.alive).length + " LEFT", W / 2, 26);
+
+  // radar: forward is up, the ring is your gun range
+  const rx = W - 96, ry = H - 96, rr = 74, scale = rr / 420;
+  ctx.fillStyle = "rgba(2,10,20,.8)"; ctx.beginPath(); ctx.arc(rx, ry, rr, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = "#13456E"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = "rgba(0,229,255,.35)"; ctx.beginPath(); ctx.arc(rx, ry, me.d.range * scale, 0, 6.283); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx, ry - rr); ctx.stroke();
+  ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.moveTo(rx, ry - 6); ctx.lineTo(rx - 4, ry + 4); ctx.lineTo(rx + 4, ry + 4); ctx.closePath(); ctx.fill();
+  S.tanks.forEach((t) => {
+    if (t === me || !t.alive) return;
+    const c = cam(t.x, t.y, camH); let px = c[1] * scale, py = -c[0] * scale; const d = Math.hypot(px, py);
+    if (d > rr - 5) { px *= (rr - 5) / d; py *= (rr - 5) / d; }
+    glow(ctx, t.rec.color, 8); ctx.fillStyle = t.rec.color; ctx.beginPath(); ctx.arc(rx + px, ry + py, 4, 0, 6.283); ctx.fill(); ctx.shadowBlur = 0;
+  });
+
+  // kill feed
+  ctx.textAlign = "left"; ctx.font = "600 14px Rajdhani, sans-serif";
+  v.feed.forEach((fd, i) => { ctx.globalAlpha = Math.min(1, fd.life); ctx.fillStyle = fd.color; ctx.fillText(fd.text.toUpperCase(), 24, 30 + i * 18); });
+  ctx.globalAlpha = 1;
+
+  if (v.hurt > 0) {   // red flash at the edges when you take a hit
+    v.hurt -= dt;
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
+    vg.addColorStop(0, "rgba(255,61,113,0)"); vg.addColorStop(1, "rgba(255,61,113," + Math.max(0, v.hurt * 1.6).toFixed(3) + ")");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+  if (S.over) banner(ctx, v, W, H);
 }
 
 function buildControls(key, v) {
@@ -706,6 +939,7 @@ function buildControls(key, v) {
   snd.type = "button"; snd.setAttribute("aria-pressed", String(Sound.on));
   snd.addEventListener("click", () => { Sound.toggle(); Sound.wake(); snd.textContent = Sound.on ? "Sound on" : "Sound off"; snd.setAttribute("aria-pressed", String(Sound.on)); });
   sp.appendChild(snd);
+  if (v.me != null) return;      // you can't fast-forward a battle you're driving in
   [1, 2, 4].forEach((n) => {
     const b = el("button", "btn mono", n + "×");
     b.type = "button"; b.dataset.speed = n; b.setAttribute("aria-pressed", String(v.speed === n));
@@ -716,19 +950,18 @@ function buildControls(key, v) {
 function buildRoster(key, v) {
   const box = $(key + "Roster");
   box.textContent = "";
-  v.rows = v.S.tanks.map((t) => {
+  v.rows = v.S.tanks.map((t, i) => {
     const row = el("div", "rrow"), bar = el("div", "rbar"), fill = el("div", "rfill"), kills = el("span", "num rk", "");
-    bar.appendChild(fill);
-    row.append(dot(t.rec.color), el("span", "rname", t.rec.name), bar, kills);
+    bar.appendChild(fill); fill.style.background = t.rec.color;
+    row.append(dot(t.rec.color), el("span", "rname", t.rec.name + (v.me === i ? " (you)" : "")), bar, kills);
     box.appendChild(row);
     return { row, fill, kills };
   });
 }
 function updateRoster(key, v) {
   v.S.tanks.forEach((t, i) => {
-    const r = v.rows[i], f = t.hp / t.d.hp;
-    r.fill.style.width = f * 100 + "%";
-    r.fill.style.background = f > 0.5 ? "var(--leaf)" : f > 0.25 ? "var(--sun)" : "var(--down)";
+    const r = v.rows[i];
+    r.fill.style.width = t.hp / t.d.hp * 100 + "%";
     r.row.classList.toggle("out", !t.alive);
     r.kills.textContent = t.kills ? "×" + t.kills : "";
   });
@@ -744,6 +977,50 @@ function showResult(key, S) {
     ul.appendChild(li);
   });
 }
+
+/* ================= driving ================= */
+const KEYMAP = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "fire" };
+addEventListener("keydown", (e) => {
+  const k = KEYMAP[e.code];
+  if (!k || !driving || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  keys[k] = 1; e.preventDefault();
+});
+addEventListener("keyup", (e) => { const k = KEYMAP[e.code]; if (k) keys[k] = 0; });
+addEventListener("blur", () => { Object.keys(keys).forEach((k) => { keys[k] = 0; }); });
+document.querySelectorAll("[data-key]").forEach((b) => {
+  const k = b.dataset.key;
+  b.addEventListener("pointerdown", (e) => { e.preventDefault(); keys[k] = 1; b.setPointerCapture(e.pointerId); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach((ev) => b.addEventListener(ev, () => { keys[k] = 0; }));
+  b.addEventListener("contextmenu", (e) => e.preventDefault());
+});
+function renderDrive() {
+  const mine = $("driveTank"), keep = mine.value, foe = $("driveFoe"), keepFoe = foe.value;
+  mine.textContent = "";
+  state.tanks.slice().sort((a, b) => (b.owner === state.player) - (a.owner === state.player)).forEach((t) => mine.appendChild(new Option(t.name + " (" + t.owner + ")", t.id)));
+  if (keep && byId(keep)) mine.value = keep;
+  foe.textContent = "";
+  foe.appendChild(new Option("Everyone (free-for-all)", "__all"));
+  state.tanks.forEach((t) => foe.appendChild(new Option("Duel: " + t.name + " (" + t.owner + ")", t.id)));
+  if (keepFoe && (keepFoe === "__all" || byId(keepFoe))) foe.value = keepFoe;
+}
+$("startDrive").addEventListener("click", () => {
+  const mine = byId($("driveTank").value);
+  if (!mine) return;
+  const seed = Math.floor(Math.random() * 1e9);
+  let field;
+  if ($("driveFoe").value === "__all") {
+    field = state.tanks.filter((t) => t.id !== mine.id);
+    if (field.length > FFA_MAX - 1) field = field.map((t) => [T.hash(t.id + seed), t]).sort((a, b) => a[0] - b[0]).slice(0, FFA_MAX - 1).map((x) => x[1]);
+  } else {
+    const foe = byId($("driveFoe").value);
+    if (!foe || foe.id === mine.id) { $("driveLabel").textContent = "Pick a different opponent."; return; }
+    field = [foe];
+  }
+  play("drive", [mine].concat(field), seed, { me: 0 });
+  $("startDrive").textContent = "Restart";
+  $("startDrive").blur();
+  $("driveCanvas").scrollIntoView({ block: "center", behavior: "smooth" });
+});
 
 /* ================= league =================
    Every pair of tanks duels several times, and the whole field plays a set of free-for-alls.
@@ -832,8 +1109,10 @@ $("startArena").addEventListener("click", () => {
 
 /* ================= views ================= */
 function showView() {
-  const view = ["garage", "league", "arena"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "garage";
-  ["garage", "league", "arena"].forEach((v) => { $("view-" + v).hidden = v !== view; });
+  const all = ["garage", "league", "arena", "drive"];
+  const view = all.includes(location.hash.slice(1)) ? location.hash.slice(1) : "garage";
+  all.forEach((v) => { $("view-" + v).hidden = v !== view; });
+  if (view === "drive") renderDrive();
   document.querySelectorAll(".tabs a").forEach((a) => { if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   if (view === "league") renderLeague();
 }

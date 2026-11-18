@@ -17,18 +17,19 @@
   var B = {
     hpBase: 70, hpPer: 12,
     speedBase: 22, speedPer: 19,
-    dmgBase: 38, dmgPer: 4.9,
+    dmgBase: 25.5, dmgPer: 3.3,
     rateBase: 0.6, ratePer: 0.095,
     rangeBase: 140, rangePer: 9.5,
     shellBase: 120, shellPer: 16,
-    spreadBase: 0.45, spreadPer: 0.03,
+    spreadBase: 0.35, spreadPer: 0.031,
     turretBase: 1.4, turretPer: 0.32,
     leadBase: 0.2, leadPer: 0.08,
     turnBase: 2.4, turnPer: 0.16,
+    hitPad: 9,           // extra reach on a shell's hit check
     standoff: 0.85,      // every tank fights near the edge of its own gun range
     falloff: 0.6,        // shells lose up to this share of their damage by the end of their range
-    evade: 3.5,          // a fast-moving target is harder to hit: spread grows with its speed
-    aimPenalty: 1.7      // weaving throws off your own aim
+    evade: 2.1,          // a fast-moving target is harder to hit: spread grows with its speed
+    aimPenalty: 2.4      // weaving throws off your own aim
   };
 
 
@@ -137,6 +138,27 @@
     return best;
   }
 
+  /* A player-driven tank. input: { fwd: -1..1, turn: -1..1, fire: true/false }
+     You aim the turret; the hull swings round to follow it and drives where the hull points. */
+  function drive(S, me, i) {
+    var inp = me.input, rand = S.rand;
+    var turn = Math.max(-1, Math.min(1, inp.turn || 0)), fwd = Math.max(-1, Math.min(1, inp.fwd || 0));
+    me.turret = wrap(me.turret + turn * me.d.turretRate * 0.7 * DT);
+    me.body = turnToward(me.body, me.turret, me.d.turn * DT);
+    var sp = me.d.speed * (fwd >= 0 ? fwd : fwd * 0.6);
+    me.vx = Math.cos(me.body) * sp; me.vy = Math.sin(me.body) * sp;
+    me.x = Math.max(RADIUS, Math.min(S.w - RADIUS, me.x + me.vx * DT));
+    me.y = Math.max(RADIUS, Math.min(S.h - RADIUS, me.y + me.vy * DT));
+    me.cool -= DT;
+    if (inp.fire && me.cool <= 0) {
+      var g = (rand() + rand() + rand() - 1.5) / 1.5;
+      var a = me.turret + g * me.d.spread * (1 + B.aimPenalty * 0.5 * Math.abs(fwd));
+      S.shells.push({ x: me.x + Math.cos(a) * RADIUS, y: me.y + Math.sin(a) * RADIUS, a: a, v: me.d.shellSpeed, left: me.d.range * 1.15, reach: me.d.range * 1.15, from: i, dmg: me.d.damage });
+      me.cool = me.d.cooldown; me.shots++; me.fired = S.t;
+      S.events.push({ type: "shot", x: me.x + Math.cos(a) * 24, y: me.y + Math.sin(a) * 24, a: a, by: i });
+    }
+  }
+
   function step(S) {
     if (S.over) return;
     var rand = S.rand, alive = 0, i;
@@ -147,6 +169,7 @@
       var me = S.tanks[i];
       if (!me.alive) continue;
       alive++;
+      if (me.input) { drive(S, me, i); continue; }   // a human is steering this one
       me.think -= DT;
       if (me.think <= 0 || me.target < 0 || !S.tanks[me.target].alive) { me.target = pickTarget(S, me); me.think = 0.5; }
       if (me.target < 0) continue;
@@ -207,7 +230,7 @@
       if (!gone) for (var j = 0; j < S.tanks.length; j++) {
         var t = S.tanks[j];
         if (!t.alive || j === s.from) continue;
-        if (Math.hypot(t.x - s.x, t.y - s.y) <= RADIUS + 2) {
+        if (Math.hypot(t.x - s.x, t.y - s.y) <= RADIUS + B.hitPad) {
           var dmg = s.dmg * (1 - B.falloff * (1 - s.left / s.reach));
           t.hp -= dmg; gone = true;
           var shooter = S.tanks[s.from]; shooter.hits++; shooter.dealt += dmg;
