@@ -25,7 +25,6 @@ window.HUB = {
   ],
 
   apps: [
-    { name: "Flashing Designer", desc: "Draw custom sheet-metal flashing profiles, price them and print the order.", category: "work", url: "work/flashing-designer/" },
     { name: "Card Market", desc: "Pokémon card prices, market movers and price trends.", category: "tools", url: "tools/card-market/", status: "live data" },
 
     // Copy this line, remove the two slashes, and fill it in:
