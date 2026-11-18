@@ -3,8 +3,10 @@
    It reads prices for every card in the newest sets from the TCGdex API and writes:
      data/market.json       today's prices, used by the market overview
      data/history/<set>.json  one price per card per day, used by the trend charts
-     data/sample-card.json  one untouched API response, kept for debugging           */
+     data/sample-card.json  one untouched API response, kept for debugging
+     data/status.json       small summary for the hub: snapshot size and a what's-new log   */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 
 const API = "https://api.tcgdex.net/v2/en";
 const LATEST_SETS = 24;       // how many of the newest sets to track
@@ -111,5 +113,14 @@ for (const set of sets) {
   if (len > HISTORY_DAYS) h.dates = h.dates.slice(len - HISTORY_DAYS);
   await writeFile(file, JSON.stringify(h));
 }
+
+// 5. A small status file for the hub: snapshot size plus recent changes from the repository history.
+let changes = [];
+try {
+  changes = execSync('git log --no-merges -60 --date=short --pretty=format:%ad%x09%s', { encoding: "utf8" })
+    .split("\n").map((l) => l.split("\t")).filter((l) => l.length === 2 && l[1] !== "Update market data")
+    .slice(0, 12).map(([date, text]) => ({ date, text }));
+} catch (err) { console.warn("no git history available", err.message); }
+await writeFile("data/status.json", JSON.stringify({ updated: new Date().toISOString(), cards: cards.length, sets: sets.length, changes }));
 
 console.log("Wrote", cards.length, "cards from", sets.length, "sets for", today);

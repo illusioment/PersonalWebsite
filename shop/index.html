@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Same greenhouse-control-room tokens as the hub. Layout: a contact strip,
+   filter chips, then a grid of listings where the photo leads. */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.5;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%);
+  background-attachment: fixed;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+.top span { color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+.lede { color: var(--muted); max-width: 60ch; margin: 0 0 24px; }
+.contact { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; padding: 16px 20px; margin-bottom: 32px; border: 1px solid var(--sun); border-radius: 14px; background: rgba(244, 196, 83, .07); }
+.contact a { color: #1A1400; background: var(--sun); font-weight: 600; text-decoration: none; border-radius: 999px; padding: 10px 22px; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; color: var(--muted); }
+.chip:hover, .chip[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); }
+select { font: inherit; font-size: 14px; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+.item { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.item.sold { opacity: .55; }
+.photo { position: relative; aspect-ratio: 4 / 3; background: rgba(42, 90, 75, .35); display: grid; place-items: center; overflow: hidden; }
+.photo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.photo .none { color: var(--muted); }
+.pill { position: absolute; top: 12px; left: 12px; border-radius: 999px; padding: 3px 12px; font-size: 11.5px; background: var(--bg); border: 1px solid currentColor; }
+.pill.available { color: var(--leaf); } .pill.pending { color: var(--sun); } .pill.sold { color: var(--down); }
+.body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.body h2 { font-family: var(--font-display); font-weight: 400; font-size: 17px; line-height: 1.3; margin: 0; overflow-wrap: anywhere; }
+.price { font-size: 22px; color: var(--sun); }
+.sold .price { text-decoration: line-through; color: var(--muted); }
+.meta { color: var(--muted); font-size: 13.5px; }
+.desc { color: var(--muted); font-size: 14.5px; margin: 0; flex: 1; }
+.market { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; font-size: 13.5px; color: var(--muted); display: flex; justify-content: space-between; gap: 12px; }
+.market b { color: var(--text); font-weight: 400; }
+.state { padding: 48px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
+footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+@media (max-width: 720px) { .wrap { padding: 0 16px 40px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="mono" href="../">← Back to hub</a>
+    <span class="mono" id="count"></span>
+  </header>
+  <h1>Shop</h1>
+  <p class="lede" id="intro"></p>
+  <div class="contact" id="contact"></div>
+  <div class="bar">
+    <div class="chips" id="chips" role="group" aria-label="Show"></div>
+    <label class="mono" for="sort" style="color: var(--muted)">Sort
+      <select id="sort">
+        <option value="new">Newest</option>
+        <option value="low">Price, low to high</option>
+        <option value="high">Price, high to low</option>
+      </select>
+    </label>
+  </div>
+  <div class="grid" id="grid"></div>
+  <footer>Prices are asking prices. Market prices, where shown, are TCGplayer figures from the open TCGdex API and are for reference only.</footer>
+</div>
+<script src="items.js"></script>
+<script>
+const SHOP = window.SHOP || { intro: "", contact: {}, items: [] };
+const API = "https://api.tcgdex.net/v2/en";
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const money = (v) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: v % 1 ? 2 : 0 }).format(v);
+const LABEL = { available: "Available", pending: "On hold", sold: "Sold" };
+const state = { show: "available", sort: "new", cards: {} };
+
+$("intro").textContent = SHOP.intro || "";
+const c = SHOP.contact || {};
+$("contact").appendChild(el("span", null, c.text || "Message me if you want something."));
+if (c.link) { const a = el("a", null, c.linkLabel || "Message me"); a.href = c.link; $("contact").appendChild(a); }
+
+[["available", "Available"], ["all", "Everything"], ["sold", "Sold"]].forEach(([key, label]) => {
+  const b = el("button", "chip mono", label);
+  b.type = "button";
+  b.setAttribute("aria-pressed", String(key === state.show));
+  b.addEventListener("click", () => {
+    state.show = key;
+    [...$("chips").children].forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    render();
+  });
+  $("chips").appendChild(b);
+});
+$("sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+
+function render() {
+  const grid = $("grid");
+  grid.textContent = "";
+  const status = (i) => i.status || "available";
+  const open = SHOP.items.filter((i) => status(i) !== "sold").length;
+  $("count").textContent = open + (open === 1 ? " item for sale" : " items for sale");
+  let list = SHOP.items.filter((i) => state.show === "all" || (state.show === "sold" ? status(i) === "sold" : status(i) !== "sold"));
+  const by = { new: (a, b) => String(b.added || "").localeCompare(String(a.added || "")), low: (a, b) => (a.price || 0) - (b.price || 0), high: (a, b) => (b.price || 0) - (a.price || 0) }[state.sort];
+  list = [...list].sort(by);
+  if (!list.length) {
+    const s = el("div", "state", SHOP.items.length ? "Nothing in this view." : "Nothing for sale right now. Check back soon.");
+    s.style.gridColumn = "1 / -1";
+    grid.appendChild(s);
+    return;
+  }
+  list.forEach((item) => {
+    const st = status(item), card = item.card && state.cards[item.card];
+    const box = el("article", "item " + st);
+    const photo = el("div", "photo");
+    const src = item.photo || (card && card.img);
+    if (src) {
+      const img = el("img");
+      img.src = src; img.alt = item.name; img.loading = "lazy";
+      img.addEventListener("error", () => img.replaceWith(el("span", "none mono", "No photo")));
+      photo.appendChild(img);
+    } else photo.appendChild(el("span", "none mono", "No photo"));
+    photo.appendChild(el("span", "pill mono " + st, LABEL[st] || st));
+    const body = el("div", "body");
+    body.appendChild(el("h2", null, item.name));
+    if (item.price != null) body.appendChild(el("div", "price num", money(item.price)));
+    const meta = [item.condition, item.added && "Listed " + item.added].filter(Boolean).join(" · ");
+    if (meta) body.appendChild(el("div", "meta", meta));
+    if (item.desc) body.appendChild(el("p", "desc", item.desc));
+    if (card && card.usd != null) {
+      const m = el("div", "market");
+      m.append(el("span", null, "Market price"), el("b", "num", money(card.usd)));
+      body.appendChild(m);
+    }
+    box.append(photo, body);
+    grid.appendChild(box);
+  });
+}
+
+/* Listings tied to a Pokémon card pull that card's picture and current market price. */
+async function loadCards() {
+  const ids = [...new Set(SHOP.items.map((i) => i.card).filter(Boolean))];
+  await Promise.allSettled(ids.map(async (id) => {
+    const r = await fetch(API + "/cards/" + encodeURIComponent(id));
+    if (!r.ok) return;
+    const d = await r.json(), tp = (d.pricing && d.pricing.tcgplayer) || {};
+    const prices = Object.values(tp).filter((v) => v && typeof v === "object").map((v) => v.marketPrice || v.midPrice).filter((v) => v > 0);
+    state.cards[id] = { img: d.image ? d.image + "/high.webp" : null, usd: prices.length ? Math.max(...prices) : null };
+  }));
+  if (ids.length) render();
+}
+render();
+loadCards();
+</script>
+</body>
+</html>

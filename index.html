@@ -129,6 +129,18 @@ section.cat { padding: 40px 0 8px; scroll-margin-top: 16px; }
 .slot code { font-family: var(--font-mono); font-size: 13px; color: var(--text); }
 .none { color: var(--muted); padding: 8px 0 0; }
 
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; padding-bottom: 8px; }
+.tile { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; color: inherit; text-decoration: none; transition: border-color .25s; }
+a.tile:hover { border-color: var(--sun); }
+.tile .mono { color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.tile .mono i { width: 8px; height: 8px; border-radius: 50%; background: var(--leaf); box-shadow: 0 0 10px var(--leaf); }
+.tile .mono i.off { background: var(--muted); box-shadow: none; }
+.tile strong { font-family: var(--font-display); font-weight: 400; font-size: 19px; }
+.tile small { color: var(--muted); font-size: 13px; }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.log li { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); }
+.log li:last-child { border-bottom: 0; }
+.log time { color: var(--muted); }
 footer { margin-top: 48px; padding: 20px 0 36px; border-top: 1px solid var(--line); color: var(--muted); }
 
 @media (max-width: 760px) {
@@ -173,12 +185,20 @@ footer { margin-top: 48px; padding: 20px 0 36px; border-top: 1px solid var(--lin
     </div>
   </section>
 
+  <section class="board" id="board" aria-label="Status"></section>
+
   <main id="main"></main>
+
+  <section class="cat" id="whats-new" hidden>
+    <div class="cat-head"><h2>What's new</h2><p>Recent changes to this site.</p></div>
+    <ul class="log" id="log"></ul>
+  </section>
 
   <footer class="mono" id="foot"></footer>
 </div>
 
 <script src="apps.js"></script>
+<script src="shop/items.js"></script>
 <script>
 const HUB = window.HUB || { title: "App Hub", tagline: "", categories: [], apps: [] };
 const $ = (id) => document.getElementById(id);
@@ -202,6 +222,50 @@ HUB.categories.forEach((c) => {
   a.href = "#" + c.id;
   $("nav").appendChild(a);
 });
+
+const shopLink = el("a", null, "Shop");
+shopLink.href = "shop/";
+$("nav").appendChild(shopLink);
+
+/* Status board: one tile per live part of the site. */
+function ago(iso) {
+  const h = Math.round((Date.now() - new Date(iso)) / 36e5);
+  return h < 1 ? "under an hour ago" : h < 48 ? h + (h === 1 ? " hour ago" : " hours ago") : Math.round(h / 24) + " days ago";
+}
+function stat(label, value, note, href, on) {
+  const t = el(href ? "a" : "div", "tile");
+  if (href) t.href = href;
+  const head = el("span", "mono"), dot = el("i", on === false ? "off" : "");
+  head.append(dot, label);
+  t.append(head, el("strong", null, value), el("small", null, note));
+  return t;
+}
+function renderBoard(status) {
+  const board = $("board");
+  board.textContent = "";
+  const items = (window.SHOP && window.SHOP.items) || [];
+  const open = items.filter((i) => (i.status || "available") !== "sold").length;
+  board.append(
+    stat("Apps", HUB.apps.length + " online", "in " + HUB.categories.length + " sections"),
+    status
+      ? stat("Market data", status.cards.toLocaleString() + " cards", "updated " + ago(status.updated), "tools/card-market/")
+      : stat("Market data", "Waiting", "no snapshot loaded yet", "tools/card-market/", false),
+    stat("Shop", open ? open + (open === 1 ? " item for sale" : " items for sale") : "Nothing listed", open ? "cash, friends first" : "check back soon", "shop/", open > 0)
+  );
+  const changes = (status && status.changes) || [];
+  if (changes.length) {
+    board.appendChild(stat("Latest change", changes[0].date, changes[0].text, "#whats-new"));
+    $("whats-new").hidden = false;
+    $("log").textContent = "";
+    changes.slice(0, 8).forEach((c) => {
+      const li = el("li"), time = el("time", "mono", c.date);
+      li.append(time, el("span", null, c.text));
+      $("log").appendChild(li);
+    });
+  }
+}
+renderBoard(null);
+fetch("data/status.json").then((r) => (r.ok ? r.json() : null)).then((s) => { if (s) renderBoard(s); }).catch(() => {});
 
 /* Each app gets its own symbol, generated from its name. */
 function glyph(name) {
