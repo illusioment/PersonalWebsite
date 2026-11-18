@@ -13,6 +13,7 @@ const LATEST_SETS = 24;       // how many of the newest sets to track
 const EXTRA_SETS = [];        // extra set ids to always track, e.g. ["swsh3"]
 const SKIP_SERIES = ["tcgp"]; // digital-only sets with no market prices
 const HISTORY_DAYS = 400;
+const HIDE_CHANGES = /flashing/i; // changes that should not appear in the public what's-new log
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pos = (v) => (typeof v === "number" && v > 0 ? v : null);
@@ -118,7 +119,7 @@ for (const set of sets) {
 let changes = [];
 try {
   changes = execSync('git log --no-merges -60 --date=short --pretty=format:%ad%x09%s', { encoding: "utf8" })
-    .split("\n").map((l) => l.split("\t")).filter((l) => l.length === 2 && l[1] !== "Update market data")
+    .split("\n").map((l) => l.split("\t")).filter((l) => l.length === 2 && l[1] !== "Update market data" && !HIDE_CHANGES.test(l[1]))
     .slice(0, 12).map(([date, text]) => ({ date, text }));
 } catch (err) { console.warn("no git history available", err.message); }
 await writeFile("data/status.json", JSON.stringify({ updated: new Date().toISOString(), cards: cards.length, sets: sets.length, changes }));
