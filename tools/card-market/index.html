@@ -258,10 +258,12 @@ function fromSnapshot(r) {
 }
 
 function image(c, quality) {
-  const img = el("img", quality === "high" ? "art" : "thumb");
+  const cls = quality === "high" ? "art" : "thumb";
+  if (!c.img) return el("div", cls);
+  const img = el("img", cls);
   img.alt = ""; img.loading = "lazy";
-  if (c.img) img.src = c.img + "/" + quality + ".webp";
-  img.addEventListener("error", () => img.removeAttribute("src"));
+  img.src = c.img + "/" + quality + ".webp";
+  img.addEventListener("error", () => img.replaceWith(el("div", cls)));
   return img;
 }
 function moveClass(m) { return m == null ? "flat" : m >= .05 ? "up" : m <= -.05 ? "down" : "flat"; }
@@ -346,7 +348,7 @@ function renderOverview() {
     nameCell.appendChild(btn);
     const moveCell = el("td", "r num " + moveClass(med), med == null ? "–" : pct(med));
     tr.append(nameCell, el("td", null, s.date || "–"), el("td", "r num", s.priced + " of " + s.total),
-      el("td", "r num", money(mine.reduce((sum, c) => sum + (c.usd || 0), 0), "USD")),
+      el("td", "r num", money(mine.reduce((sum, c) => sum + (c.usd || 0), 0) || null, "USD")),
       el("td", "r num", top ? best(top) : "–"), moveCell);
     table.appendChild(tr);
   });

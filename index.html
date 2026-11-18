@@ -22,7 +22,6 @@
   --font-display: "Unbounded", "Trebuchet MS", sans-serif;
   --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --cut: 18px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -36,7 +35,7 @@ body {
   background-attachment: fixed;
 }
 #field { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-.wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+.wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 :focus-visible { outline: 2px solid var(--sun); outline-offset: 3px; }
 .mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
 
@@ -68,8 +67,8 @@ h1 span { color: var(--sun); }
 .dial .ground { stroke: var(--line); stroke-width: 1.5; }
 .dial .tick { stroke: var(--line); stroke-width: 1.5; }
 .dial text { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; }
-.dial .orb { fill: var(--sun); filter: drop-shadow(0 0 16px var(--sun)); transition: cx 1s, cy 1s; }
-.dial .halo { fill: none; stroke: var(--sun); stroke-opacity: .35; transition: cx 1s, cy 1s; animation: halo 4s ease-out infinite; }
+.dial .orb { fill: var(--sun); filter: drop-shadow(0 0 16px var(--sun)); }
+.dial .halo { fill: none; stroke: var(--sun); stroke-opacity: .35; animation: halo 4s ease-out infinite; }
 .dial.night .orb { fill: var(--text); filter: drop-shadow(0 0 12px var(--leaf)); }
 .dial.night .halo { stroke: var(--leaf); }
 @keyframes halo { from { r: 14; stroke-opacity: .5; } to { r: 44; stroke-opacity: 0; } }
@@ -86,17 +85,17 @@ h1 span { color: var(--sun); }
 .search:focus { border-color: var(--leaf); outline: none; box-shadow: 0 0 0 3px rgba(123, 224, 160, .15); }
 
 /* Sections */
-section.cat { padding: 36px 0 12px; scroll-margin-top: 16px; }
-.cat-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding-bottom: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+section.cat { padding: 40px 0 8px; scroll-margin-top: 16px; }
+.cat-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; padding-bottom: 16px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
 .cat-head h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; margin: 0; }
 .cat-head p { margin: 0; color: var(--muted); flex: 1 1 200px; }
 .cat-head .mono { color: var(--leaf); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 18px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
 
 /* Cards */
 .card, .slot {
-  clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, var(--cut) 100%, 0 calc(100% - var(--cut)));
-  min-height: 190px; padding: 20px; display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--line); border-radius: 14px;
+  min-height: 200px; padding: 24px; display: flex; flex-direction: column; gap: 12px;
 }
 .card {
   --mx: 50%; --my: 0%;
@@ -104,12 +103,11 @@ section.cat { padding: 36px 0 12px; scroll-margin-top: 16px; }
   background:
     radial-gradient(260px circle at var(--mx) var(--my), rgba(244, 196, 83, .16), transparent 70%),
     linear-gradient(160deg, #123329, var(--panel));
-  box-shadow: inset 0 0 0 1px var(--line);
-  transition: box-shadow .25s, translate .25s;
+  transition: border-color .25s, translate .25s;
   animation: rise .6s ease-out backwards; animation-delay: calc(var(--i) * 70ms);
 }
 @keyframes rise { from { translate: 0 14px; } }
-.card:hover { box-shadow: inset 0 0 0 1px var(--sun); translate: 0 -3px; }
+.card:hover { border-color: var(--sun); translate: 0 -3px; }
 .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .glyph { width: 44px; height: 44px; flex: none; }
 .glyph rect { fill: var(--leaf); transition: fill .25s; }
@@ -124,8 +122,8 @@ section.cat { padding: 36px 0 12px; scroll-margin-top: 16px; }
 
 .slot {
   justify-content: center; color: var(--muted);
+  border-style: dashed;
   background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(42, 90, 75, .28) 10px 11px);
-  box-shadow: inset 0 0 0 1px var(--line);
 }
 .slot .mono { color: var(--leaf); }
 .slot code { font-family: var(--font-mono); font-size: 13px; color: var(--text); }
@@ -169,8 +167,7 @@ footer { margin-top: 48px; padding: 20px 0 36px; border-top: 1px solid var(--lin
         <text x="20" y="214" text-anchor="middle" id="t0"></text>
         <text x="200" y="214" text-anchor="middle" id="t1"></text>
         <text x="380" y="214" text-anchor="middle" id="t2"></text>
-        <circle class="halo" id="halo" r="14"/>
-        <circle class="orb" id="orb" r="13"/>
+        <g id="sun"><circle class="halo" r="14"/><circle class="orb" r="13"/></g>
       </svg>
       <p class="mono" id="clock"></p>
     </div>
@@ -281,7 +278,7 @@ function tick() {
   const day = h >= 6 && h < 18;
   const t = day ? (h - 6) / 12 : ((h + 6) % 24) / 12;
   const x = 200 - 180 * Math.cos(Math.PI * t), y = 195 - 170 * Math.sin(Math.PI * t);
-  ["orb", "halo"].forEach((id) => { $(id).setAttribute("cx", x.toFixed(1)); $(id).setAttribute("cy", y.toFixed(1)); });
+  $("sun").setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ")");
   $("dial").classList.toggle("night", !day);
   $("t0").textContent = day ? "06:00" : "18:00";
   $("t1").textContent = day ? "12:00" : "00:00";
