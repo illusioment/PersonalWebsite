@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Card Market Analyzer</title>
+<title>Card Market</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
 <style>
-/* Same greenhouse-control-room tokens as the hub. Layout: search on top,
-   summary tiles, then one scannable row per card that opens into detail. */
+/* Same greenhouse-control-room tokens as the hub. Layout: search on top, then
+   either the market overview (tiles, three leaderboards, sets) or a card list
+   whose rows open into price detail and a trend chart. */
 :root {
   --bg: #071A16;
   --panel: #0E2A23;
@@ -23,6 +24,7 @@
   --font-display: "Unbounded", "Trebuchet MS", sans-serif;
   --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --gap: 16px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -32,93 +34,115 @@ body {
   background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%);
   background-attachment: fixed;
 }
-.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px 40px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 48px; }
 :focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
 .mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
 .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 [hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
 
-.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 0; border-bottom: 1px solid var(--line); }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
 .top a { color: var(--muted); text-decoration: none; }
 .top a:hover { color: var(--leaf); }
-.live { display: flex; align-items: center; gap: 8px; color: var(--muted); }
-.live i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
-.live.on { color: var(--leaf); }
-.live.on i { background: var(--leaf); box-shadow: 0 0 12px var(--leaf); }
-.live.demo { color: var(--sun); }
-.live.demo i { background: var(--sun); }
+.stamp { color: var(--muted); }
 
-h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 36px 0 10px; text-wrap: balance; }
-.lede { color: var(--muted); max-width: 56ch; margin: 0 0 24px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 60ch; margin: 0 0 24px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 0; }
 
-form { display: flex; flex-wrap: wrap; gap: 10px; }
-input[type="search"], select {
-  font: inherit; color: var(--text); background: var(--panel);
-  border: 1px solid var(--line); border-radius: 999px; padding: 11px 18px;
-}
-input[type="search"] { flex: 1 1 240px; }
+form { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 40px; }
+input[type="search"], select { font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 12px 20px; }
+input[type="search"] { flex: 1 1 260px; min-width: 0; }
 input[type="search"]::placeholder { color: var(--muted); }
-button { font: inherit; color: inherit; cursor: pointer; }
-.primary { background: var(--sun); color: #1A1400; font-weight: 600; border: 0; border-radius: 999px; padding: 11px 24px; }
+.primary { background: var(--sun); color: #1A1400; font-weight: 600; border: 0; border-radius: 999px; padding: 12px 28px; }
 .primary:hover { filter: brightness(1.1); }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; color: var(--muted); }
+.ghost:hover, .ghost[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); }
 
-.notice { margin: 20px 0 0; padding: 14px 18px; border: 1px solid var(--sun); border-radius: 12px; background: rgba(244, 196, 83, .08); }
-.notice b { color: var(--sun); font-weight: 600; }
+/* Overview */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--gap); margin-bottom: 32px; }
+.tile, .board, .sets, .row, .state { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.tile { padding: 18px 20px; }
+.tile .mono { color: var(--muted); display: block; margin-bottom: 6px; }
+.tile strong { font-family: var(--font-display); font-weight: 400; font-size: 22px; }
+.tile small { display: block; color: var(--muted); margin-top: 4px; font-size: 13px; }
 
-.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 28px 0 14px; }
-.tabs { display: flex; gap: 6px; }
-.tab { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; color: var(--muted); }
-.tab[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); }
-select { padding: 7px 14px; font-size: 14px; }
+.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: var(--gap); margin-bottom: 32px; }
+.board { padding: 20px 12px 12px; min-width: 0; }
+.board-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 8px 12px; }
+.board-head button { background: none; border: 0; padding: 0; color: var(--leaf); }
+.mini { width: 100%; background: transparent; border: 0; border-radius: 10px; text-align: left; padding: 8px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.mini:hover { background: rgba(123, 224, 160, .07); }
+.mini .name { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini .sub { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mini .right { text-align: right; font-size: 14px; }
+.mini .right span { display: block; font-size: 12.5px; }
 
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
-.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-.tile .mono { color: var(--muted); display: block; margin-bottom: 4px; }
-.tile strong { font-family: var(--font-display); font-weight: 400; font-size: 20px; overflow-wrap: anywhere; }
+.thumb { width: 36px; aspect-ratio: 63 / 88; border-radius: 4px; background: rgba(42, 90, 75, .5); object-fit: cover; display: block; }
+.up { color: var(--up); } .down { color: var(--down); } .flat { color: var(--muted); }
 
+.sets { padding: 20px; overflow-x: auto; }
+.sets h2 { margin-bottom: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+th { text-align: left; font-weight: 400; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 12px 12px 12px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; padding-right: 0; padding-left: 12px; }
+td button { background: none; border: 0; padding: 0; color: var(--text); font-weight: 600; text-align: left; }
+td button:hover { color: var(--sun); }
+
+/* Card list */
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.bar-left { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+select { padding: 8px 16px; font-size: 14px; }
 .rows { display: flex; flex-direction: column; gap: 8px; }
-.row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.row { overflow: hidden; }
 .row.open { border-color: var(--sun); }
-.head {
-  width: 100%; text-align: left; background: transparent; border: 0; padding: 14px 16px;
-  display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px 104px; gap: 12px; align-items: center;
-}
+.head { width: 100%; text-align: left; background: transparent; border: 0; padding: 12px 16px; display: grid; grid-template-columns: 44px minmax(0, 1fr) 100px 100px 116px; gap: 16px; align-items: center; }
 .head:hover { background: rgba(123, 224, 160, .05); }
+.head .thumb { width: 44px; }
 .name { font-weight: 600; overflow-wrap: anywhere; }
 .sub { color: var(--muted); font-size: 13.5px; }
 .price { text-align: right; }
 .price small { display: block; color: var(--muted); font-family: var(--font-body); font-size: 11.5px; }
-.pill { justify-self: end; border: 1px solid currentColor; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; color: var(--muted); }
-.pill.up { color: var(--up); } .pill.down { color: var(--down); }
+.pill { justify-self: end; border: 1px solid currentColor; border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
 
-.detail { border-top: 1px solid var(--line); padding: 18px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.detail h3 { font-family: var(--font-mono); font-weight: 500; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--leaf); margin: 0 0 12px; }
-.avg { display: grid; grid-template-columns: 64px 1fr 76px; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13.5px; color: var(--muted); }
+.detail { border-top: 1px solid var(--line); padding: 24px 20px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; }
+.detail .art { width: 100%; aspect-ratio: 63 / 88; border-radius: 10px; background: rgba(42, 90, 75, .5); object-fit: contain; display: block; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 24px 28px; align-content: start; min-width: 0; }
+.panels h3 { font-family: var(--font-mono); font-weight: 500; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--leaf); margin: 0 0 12px; }
+.wide { grid-column: 1 / -1; }
+.avg { display: grid; grid-template-columns: 64px 1fr 80px; gap: 12px; align-items: center; margin-bottom: 8px; font-size: 13.5px; color: var(--muted); }
 .avg .track { height: 10px; background: rgba(42, 90, 75, .45); border-radius: 5px; overflow: hidden; }
 .avg .fill { height: 100%; background: var(--leaf); border-radius: 5px; }
 .avg:last-of-type .fill { background: var(--sun); }
 .avg .num { color: var(--text); text-align: right; }
 .range { margin-bottom: 16px; font-size: 13.5px; }
-.range .label { display: flex; justify-content: space-between; color: var(--muted); margin-bottom: 6px; }
-.range .label b { color: var(--text); font-weight: 400; }
-.range .track { position: relative; height: 6px; background: rgba(42, 90, 75, .6); border-radius: 3px; margin: 0 6px; }
+.range .label { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); margin-bottom: 8px; text-transform: capitalize; }
+.range .label b { color: var(--text); font-weight: 400; text-transform: none; }
+.range .track { position: relative; height: 6px; background: rgba(42, 90, 75, .6); border-radius: 3px; margin: 0 7px; }
 .range .dot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--sun); translate: -50% -50%; box-shadow: 0 0 10px var(--sun); }
-.range .ends { display: flex; justify-content: space-between; color: var(--muted); margin-top: 6px; }
-.read { grid-column: 1 / -1; margin: 0; color: var(--muted); }
+.range .ends { display: flex; justify-content: space-between; color: var(--muted); margin-top: 8px; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart .line { fill: none; stroke: var(--sun); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.chart .area { fill: rgba(244, 196, 83, .12); }
+.chart .grid { stroke: var(--line); stroke-dasharray: 2 5; vector-effect: non-scaling-stroke; }
+.chart .axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; margin-top: 6px; }
+.read { margin: 0; color: var(--muted); }
 .read b { color: var(--text); font-weight: 600; }
-.actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
-.watch { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; }
-.watch[aria-pressed="true"] { border-color: var(--sun); color: var(--sun); }
-.stamp { color: var(--muted); font-size: 12.5px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ghost[aria-pressed="true"].watch { border-color: var(--sun); color: var(--sun); }
 
-.state { padding: 36px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 12px; }
-footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.state { padding: 40px 20px; text-align: center; color: var(--muted); border-style: dashed; background: transparent; }
+footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; max-width: 80ch; }
 
-@media (max-width: 640px) {
-  .head { grid-template-columns: minmax(0, 1fr) auto; }
+@media (max-width: 720px) {
+  .wrap { padding: 0 16px 40px; }
+  .head { grid-template-columns: 44px minmax(0, 1fr) auto; }
   .head .eur { display: none; }
-  .pill { grid-column: 1 / -1; justify-self: start; }
+  .pill { grid-column: 2 / -1; justify-self: start; }
   .detail { grid-template-columns: 1fr; }
+  .detail .art { max-width: 220px; }
 }
 </style>
 </head>
@@ -126,50 +150,58 @@ footer { margin-top: 36px; padding-top: 18px; border-top: 1px solid var(--line);
 <div class="wrap">
   <header class="top">
     <a class="mono" href="../../">← Back to hub</a>
-    <div class="live mono" id="live"><i></i><span id="liveText">Connecting</span></div>
+    <div class="stamp mono" id="stamp"></div>
   </header>
 
-  <h1>Card Market Analyzer</h1>
-  <p class="lede">Look up any Pokémon card and see what it sells for today on TCGplayer and Cardmarket, and which way its price has moved over the last 30 days.</p>
+  <h1>Pokémon Card Market</h1>
+  <p class="lede">What cards sell for on TCGplayer and Cardmarket, which ones are climbing or sliding, and how each price has moved over time.</p>
 
   <form id="form">
-    <input type="search" id="q" placeholder="Card name, e.g. Charizard" aria-label="Card name" autocomplete="off" value="Charizard">
-    <button class="primary" type="submit">Analyze</button>
+    <input type="search" id="q" placeholder="Search any card by name" aria-label="Card name" autocomplete="off">
+    <button class="primary" type="submit">Search</button>
+    <button class="ghost mono" id="watchBtn" type="button">Watchlist</button>
   </form>
 
-  <div class="notice" id="notice" hidden></div>
+  <section id="overview">
+    <div class="tiles" id="tiles"></div>
+    <div class="boards" id="boards"></div>
+    <div class="sets" id="sets" hidden></div>
+    <div class="state" id="overviewState" hidden></div>
+  </section>
 
-  <div class="bar">
-    <div class="tabs" role="group" aria-label="View">
-      <button class="tab mono" id="tabSearch" type="button" aria-pressed="true">Results</button>
-      <button class="tab mono" id="tabWatch" type="button" aria-pressed="false">Watchlist</button>
+  <section id="list" hidden>
+    <div class="bar">
+      <div class="bar-left">
+        <button class="ghost mono" id="back" type="button">← Market overview</button>
+        <h2 id="listTitle"></h2>
+      </div>
+      <label class="mono" for="sort" style="color: var(--muted)">Sort
+        <select id="sort">
+          <option value="price">Highest price</option>
+          <option value="up">Biggest risers</option>
+          <option value="down">Biggest fallers</option>
+          <option value="name">Name</option>
+        </select>
+      </label>
     </div>
-    <label class="mono" for="sort" style="color: var(--muted)">Sort
-      <select id="sort">
-        <option value="price">Highest price</option>
-        <option value="up">Biggest risers</option>
-        <option value="down">Biggest fallers</option>
-        <option value="name">Name</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="tiles" id="tiles"></div>
-  <div class="rows" id="rows" aria-live="polite"></div>
+    <div class="rows" id="rows" aria-live="polite"></div>
+  </section>
 
   <footer>
-    Prices come from TCGplayer (US dollars) and Cardmarket (euros) through the open TCGdex API. For information only, not buying or selling advice.
-    This is an unofficial fan tool, not affiliated with Nintendo, Creatures, GAME FREAK or The Pokémon Company.
+    Prices come from TCGplayer (US dollars) and Cardmarket (euros) through the open TCGdex API. The market overview is a daily snapshot of the newest sets; search covers every card.
+    For information only, not buying or selling advice. This is an unofficial fan tool, not affiliated with Nintendo, Creatures, GAME FREAK or The Pokémon Company.
   </footer>
 </div>
 
 <script>
-/* ---------- The API connection ----------
-   TCGdex is a free, public API that needs no key, so the browser can call it directly.
-   1. Search by name      GET {API}/cards?name=charizard   -> short list of matches
-   2. Fetch each match    GET {API}/cards/{id}             -> full card with a "pricing" object */
+/* ---------- Where the data comes from ----------
+   1. ../../data/market.json and history.json: written once a day by scripts/snapshot.mjs
+      (a GitHub Action). Powers the overview and the trend charts.
+   2. The TCGdex API, called straight from the browser. Powers search and the watchlist. */
 const API = "https://api.tcgdex.net/v2/en";
-const MAX_CARDS = 24;
+const DATA = "../../data/";
+const MAX_CARDS = 30;
+const MIN_PRICE = 3;   // leaderboards ignore cards cheaper than this, where tiny moves look huge
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -178,9 +210,12 @@ const el = (tag, cls, text) => {
   if (text != null) n.textContent = text;
   return n;
 };
-const money = (v, cur) => v == null ? "–" : new Intl.NumberFormat("en-US", { style: "currency", currency: cur }).format(v);
+const SVG = "http://www.w3.org/2000/svg";
+const money = (v, cur) => v == null ? "–" : new Intl.NumberFormat("en-US", { style: "currency", currency: cur, maximumFractionDigits: v >= 1000 ? 0 : 2 }).format(v);
 const pct = (v) => (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
 const pos = (v) => (typeof v === "number" && v > 0 ? v : null);
+const best = (c) => c.usd != null ? money(c.usd, "USD") : money(c.eur, "EUR");
+const worth = (c) => c.usd ?? c.eur ?? 0;
 
 async function getJSON(url) {
   const r = await fetch(url);
@@ -192,125 +227,158 @@ let watch = new Set();
 try { watch = new Set(JSON.parse(localStorage.getItem("card-watch") || "[]")); } catch (e) {}
 const saveWatch = () => { try { localStorage.setItem("card-watch", JSON.stringify([...watch])); } catch (e) {} };
 
-const state = { cards: [], view: "search", sort: "price", open: null, demo: false, found: 0, loading: false, query: "" };
+const state = { market: null, hist: {}, cards: [], title: "", sort: "price", open: null, loading: false, empty: "" };
 
-/* Turn one raw API card into the handful of numbers the page shows. */
-function normalize(c) {
+function withMoves(c) {
+  c.move = c.avg7 && c.avg30 ? (c.avg7 - c.avg30) / c.avg30 : null;
+  c.day = c.avg1 && c.avg7 ? (c.avg1 - c.avg7) / c.avg7 : null;
+  return c;
+}
+/* A card as the live API returns it. */
+function fromApi(c) {
   const p = c.pricing || {}, cm = p.cardmarket || null, tp = p.tcgplayer || null;
   const pick = (k) => cm ? (pos(cm[k]) ?? pos(cm[k + "-holo"])) : null;
   const variants = tp ? Object.entries(tp)
     .filter(([, v]) => v && typeof v === "object" && pos(v.marketPrice ?? v.midPrice))
-    .map(([key, v]) => ({ key, low: pos(v.lowPrice), mid: pos(v.midPrice), market: pos(v.marketPrice) ?? pos(v.midPrice), high: pos(v.highPrice) }))
+    .map(([key, v]) => ({ key, low: pos(v.lowPrice), market: pos(v.marketPrice) ?? pos(v.midPrice), high: pos(v.highPrice) }))
     .sort((a, b) => b.market - a.market) : [];
-  const avg1 = pick("avg1"), avg7 = pick("avg7"), avg30 = pick("avg30");
-  return {
-    id: c.id, name: c.name, set: c.set && c.set.name, num: c.localId, rarity: c.rarity,
+  return withMoves({
+    id: c.id, name: c.name, set: c.set && c.set.name, setId: c.set && c.set.id, num: c.localId, rarity: c.rarity, img: c.image,
     usd: variants.length ? variants[0].market : null, variants,
-    eur: pick("trend") ?? pick("avg"), eurLow: pick("low"), avg1, avg7, avg30,
-    move: avg7 && avg30 ? (avg7 - avg30) / avg30 : null,
-    day: avg1 && avg7 ? (avg1 - avg7) / avg7 : null,
-    tpUpdated: tp && tp.updated, cmUpdated: cm && cm.updated
-  };
+    eur: pick("trend") ?? pick("avg"), eurLow: pick("low"), avg1: pick("avg1"), avg7: pick("avg7"), avg30: pick("avg30")
+  });
+}
+/* A card as the daily snapshot stores it (short keys to keep the file small). */
+function fromSnapshot(r) {
+  return withMoves({
+    id: r.id, name: r.n, set: r.s, setId: r.sid, num: r.num, rarity: r.r, img: r.img,
+    usd: r.usd, variants: (r.v || []).map(([key, low, market, high]) => ({ key, low, market, high })),
+    eur: r.eur, eurLow: r.lo, avg1: r.a1, avg7: r.a7, avg30: r.a30
+  });
 }
 
-async function loadCards(ids) {
-  const done = await Promise.allSettled(ids.map((id) => getJSON(API + "/cards/" + encodeURIComponent(id))));
-  return done.filter((d) => d.status === "fulfilled" && d.value && d.value.id).map((d) => normalize(d.value));
+function image(c, quality) {
+  const img = el("img", quality === "high" ? "art" : "thumb");
+  img.alt = ""; img.loading = "lazy";
+  if (c.img) img.src = c.img + "/" + quality + ".webp";
+  img.addEventListener("error", () => img.removeAttribute("src"));
+  return img;
 }
-
-async function search(name) {
-  state.query = name; state.loading = true; state.open = null; render();
-  try {
-    const list = await getJSON(API + "/cards?name=" + encodeURIComponent(name));
-    state.found = list.length;
-    state.cards = await loadCards(list.slice(0, MAX_CARDS).map((c) => c.id));
-    setLive(true);
-  } catch (err) {
-    useSamples();
-  }
-  state.loading = false; render();
-}
-
-async function loadWatchlist() {
-  state.loading = true; state.open = null; render();
-  if (state.demo) state.cards = SAMPLES.map(normalize).filter((c) => watch.has(c.id));
-  else {
-    try { state.cards = await loadCards([...watch]); setLive(true); }
-    catch (err) { state.cards = []; }
-  }
-  state.found = state.cards.length;
-  state.loading = false; render();
-}
-
-function setLive(on) {
-  state.demo = !on;
-  $("live").className = "live mono " + (on ? "on" : "demo");
-  $("liveText").textContent = on ? "Live data" : "Sample data";
-  $("notice").hidden = on;
-}
-
-/* If the API can't be reached, show made-up cards so the layout is still visible. */
-const SAMPLES = [
-  ["A", "Holo Rare", 182.4, 131, 171, 158, 149], ["B", "Rare", 41.2, 30, 36.1, 37.9, 39.4],
-  ["C", "Ultra Rare", 96.75, 70, 88.2, 86.9, 80.3], ["D", "Common", 1.15, .5, .98, .99, 1.0],
-  ["E", "Secret Rare", 310, 240, 268, 281, 297], ["F", "Uncommon", 4.6, 3, 4.4, 4.1, 3.5]
-].map(([k, rarity, usd, low, a1, a7, a30], i) => ({
-  id: "sample-" + k, name: "Sample Card " + k, localId: String(i + 1), rarity, set: { name: "Made-up Set" },
-  pricing: {
-    tcgplayer: { updated: null, normal: { lowPrice: low, midPrice: usd * .97, marketPrice: usd, highPrice: usd * 1.4 } },
-    cardmarket: { updated: null, avg: a7, low: low * .8, trend: a7, avg1: a1, avg7: a7, avg30: a30 }
-  }
-}));
-function useSamples() {
-  setLive(false);
-  $("notice").innerHTML = "<b>These are made-up sample cards, not real prices.</b> The live price feed couldn't be reached from here. " +
-    "That is expected inside the Claude preview, which blocks outside connections. Once this page is on your own host it loads real data.";
-  state.cards = SAMPLES.map(normalize);
-  state.found = state.cards.length;
-}
-
+function moveClass(m) { return m == null ? "flat" : m >= .05 ? "up" : m <= -.05 ? "down" : "flat"; }
 function signal(c) {
-  if (c.move == null) return { text: "No trend data", cls: "" };
-  if (c.move >= .05) return { text: "Rising " + pct(c.move), cls: "up" };
-  if (c.move <= -.05) return { text: "Falling " + pct(c.move), cls: "down" };
-  return { text: "Steady " + pct(c.move), cls: "" };
+  if (c.move == null) return "No trend data";
+  return (c.move >= .05 ? "Rising " : c.move <= -.05 ? "Falling " : "Steady ") + pct(c.move);
 }
 
+/* ---------- Overview ---------- */
+function renderOverview() {
+  const m = state.market;
+  $("tiles").textContent = ""; $("boards").textContent = ""; $("sets").textContent = "";
+  if (!m) {
+    $("overviewState").hidden = false; $("sets").hidden = true;
+    $("overviewState").textContent = "The daily market snapshot isn't available yet. It's generated automatically once a day. Search still works in the meantime.";
+    return;
+  }
+  $("overviewState").hidden = true;
+  const cards = m.cards;
+  const d = new Date(m.updated);
+  $("stamp").textContent = "Snapshot " + d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+
+  const total = cards.reduce((s, c) => s + (c.usd || 0), 0);
+  const trend = cards.filter((c) => c.move != null && worth(c) >= MIN_PRICE);
+  const up = trend.filter((c) => c.move >= .05).length, down = trend.filter((c) => c.move <= -.05).length;
+  const tile = (label, value, note) => {
+    const t = el("div", "tile");
+    t.append(el("span", "mono", label), el("strong", null, value), el("small", null, note));
+    return t;
+  };
+  $("tiles").append(
+    tile("Cards tracked", cards.length.toLocaleString(), "across the " + m.sets.length + " newest sets"),
+    tile("One of every card", money(total, "USD"), "sum of TCGplayer market prices"),
+    tile("Rising", String(up), "up 5% or more, 7-day vs 30-day"),
+    tile("Falling", String(down), "down 5% or more, 7-day vs 30-day")
+  );
+
+  const board = (title, list, right) => {
+    const b = el("div", "board");
+    const head = el("div", "board-head");
+    const all = el("button", "mono", "See all");
+    all.type = "button";
+    all.addEventListener("click", () => showList(title, list.slice(0, 50), null, right === "move" ? (title.includes("fall") ? "down" : "up") : "price"));
+    head.append(el("h2", null, title), all);
+    b.appendChild(head);
+    if (!list.length) b.appendChild(el("p", "sub", "Nothing to show yet."));
+    list.slice(0, 8).forEach((c) => {
+      const row = el("button", "mini");
+      row.type = "button";
+      const mid = el("div");
+      mid.append(el("div", "name", c.name), el("div", "sub", [c.set, c.num && "#" + c.num].filter(Boolean).join(" · ")));
+      const r = el("div", "right num", best(c));
+      if (c.move != null) r.appendChild(el("span", moveClass(c.move), pct(c.move)));
+      row.append(image(c, "low"), mid, r);
+      row.addEventListener("click", () => showList(title, list.slice(0, 50), c.id, right === "move" ? (title.includes("fall") ? "down" : "up") : "price"));
+      b.appendChild(row);
+    });
+    return b;
+  };
+  $("boards").append(
+    board("Biggest risers", [...trend].filter((c) => c.move > 0).sort((a, b) => b.move - a.move), "move"),
+    board("Biggest fallers", [...trend].filter((c) => c.move < 0).sort((a, b) => a.move - b.move), "move"),
+    board("Most valuable", [...cards].sort((a, b) => worth(b) - worth(a)), "price")
+  );
+
+  $("sets").hidden = false;
+  $("sets").appendChild(el("h2", null, "Sets tracked"));
+  const table = el("table");
+  const hr = el("tr");
+  [["Set", ""], ["Released", ""], ["Cards priced", "r"], ["One of each", "r"], ["Top card", "r"], ["Typical 30-day move", "r"]]
+    .forEach(([t, c]) => hr.appendChild(el("th", c, t)));
+  table.appendChild(hr);
+  m.sets.forEach((s) => {
+    const mine = cards.filter((c) => c.setId === s.id);
+    const moves = mine.filter((c) => c.move != null && worth(c) >= MIN_PRICE).map((c) => c.move).sort((a, b) => a - b);
+    const med = moves.length ? moves[Math.floor(moves.length / 2)] : null;
+    const top = [...mine].sort((a, b) => worth(b) - worth(a))[0];
+    const tr = el("tr");
+    const nameCell = el("td"), btn = el("button", null, s.name);
+    btn.type = "button";
+    btn.addEventListener("click", () => showList(s.name, mine, null, "price"));
+    nameCell.appendChild(btn);
+    const moveCell = el("td", "r num " + moveClass(med), med == null ? "–" : pct(med));
+    tr.append(nameCell, el("td", null, s.date || "–"), el("td", "r num", s.priced + " of " + s.total),
+      el("td", "r num", money(mine.reduce((sum, c) => sum + (c.usd || 0), 0), "USD")),
+      el("td", "r num", top ? best(top) : "–"), moveCell);
+    table.appendChild(tr);
+  });
+  $("sets").appendChild(table);
+}
+
+/* ---------- Card list ---------- */
+function showOverview() {
+  $("overview").hidden = false; $("list").hidden = true;
+  $("watchBtn").setAttribute("aria-pressed", "false");
+}
+function showList(title, cards, openId, sort) {
+  state.title = title; state.cards = cards; state.open = openId || null; state.loading = false;
+  if (sort) { state.sort = sort; $("sort").value = sort; }
+  $("overview").hidden = true; $("list").hidden = false;
+  renderList();
+  if (openId) { const n = document.querySelector(".row.open"); if (n) n.scrollIntoView({ block: "nearest" }); }
+  else scrollTo({ top: $("form").offsetTop - 16 });
+  if (openId) loadHistory();
+}
 function sorted() {
-  const by = { price: (c) => c.usd ?? c.eur, up: (c) => c.move, down: (c) => c.move == null ? null : -c.move }[state.sort];
+  const by = { price: worth, up: (c) => c.move, down: (c) => c.move == null ? null : -c.move }[state.sort];
   const list = [...state.cards];
   if (state.sort === "name") return list.sort((a, b) => a.name.localeCompare(b.name));
   return list.sort((a, b) => (by(b) ?? -Infinity) - (by(a) ?? -Infinity));
 }
-
-function tile(label, value) {
-  const t = el("div", "tile");
-  t.append(el("span", "mono", label), el("strong", null, value));
-  return t;
-}
-
-function render() {
-  const rows = $("rows"), tiles = $("tiles");
-  rows.textContent = ""; tiles.textContent = "";
-  $("tabWatch").textContent = "Watchlist (" + watch.size + ")";
-
+function renderList() {
+  const rows = $("rows");
+  rows.textContent = "";
+  $("listTitle").textContent = state.title;
   if (state.loading) { rows.appendChild(el("div", "state", "Fetching prices…")); return; }
-  if (!state.cards.length) {
-    rows.appendChild(el("div", "state", state.view === "watch"
-      ? "Your watchlist is empty. Open a card and choose Watch to keep it here."
-      : 'No cards found named "' + state.query + '". Check the spelling or try a shorter name.'));
-    return;
-  }
-
-  const priced = state.cards.filter((c) => c.usd != null).map((c) => c.usd).sort((a, b) => a - b);
-  const median = priced.length ? priced[Math.floor(priced.length / 2)] : null;
-  const riser = state.cards.filter((c) => c.move != null).sort((a, b) => b.move - a.move)[0];
-  tiles.append(
-    tile("Cards shown", state.cards.length + (state.found > state.cards.length ? " of " + state.found : "")),
-    tile("Median market price", money(median, "USD")),
-    tile("Biggest 30-day riser", riser && riser.move > 0 ? riser.name + " " + pct(riser.move) : "None rising")
-  );
-
+  if (!state.cards.length) { rows.appendChild(el("div", "state", state.empty)); return; }
   sorted().forEach((c) => {
     const row = el("article", "row" + (state.open === c.id ? " open" : ""));
     const head = el("button", "head");
@@ -320,24 +388,67 @@ function render() {
     id.append(el("div", "name", c.name), el("div", "sub", [c.set, c.num && "#" + c.num, c.rarity].filter(Boolean).join(" · ")));
     const usd = el("div", "price num", money(c.usd, "USD")); usd.appendChild(el("small", null, "TCGplayer"));
     const eur = el("div", "price num eur", money(c.eur, "EUR")); eur.appendChild(el("small", null, "Cardmarket"));
-    const s = signal(c);
-    head.append(id, usd, eur, el("span", "pill mono " + s.cls, s.text));
-    head.addEventListener("click", () => { state.open = state.open === c.id ? null : c.id; render(); });
+    head.append(image(c, "low"), id, usd, eur, el("span", "pill mono " + moveClass(c.move), signal(c)));
+    head.addEventListener("click", () => { state.open = state.open === c.id ? null : c.id; renderList(); if (state.open) loadHistory(); });
     row.appendChild(head);
     if (state.open === c.id) row.appendChild(detail(c));
     rows.appendChild(row);
   });
 }
 
+async function loadHistory() {
+  const c = state.cards.find((x) => x.id === state.open);
+  if (!c || !c.setId || state.hist[c.setId]) return;
+  try { state.hist[c.setId] = await getJSON(DATA + "history/" + encodeURIComponent(c.setId) + ".json"); }
+  catch (e) { state.hist[c.setId] = { dates: [], cur: {}, p: {} }; }
+  renderList();
+}
+
+function chart(c) {
+  const box = el("div", "chart wide");
+  box.appendChild(el("h3", null, "Price history"));
+  const h = c.setId ? state.hist[c.setId] : { dates: [], cur: {}, p: {} };
+  if (!h) { box.appendChild(el("p", "sub", "Loading history…")); return box; }
+  const series = h.p[c.id] || [], cur = h.cur[c.id] || "USD";
+  const pts = series.map((v, i) => [i, v]).filter(([, v]) => v != null);
+  if (pts.length < 2) {
+    box.appendChild(el("p", "sub", pts.length
+      ? "Daily tracking for this card has just started. The chart appears once there are two days of prices and fills in from there."
+      : "This card isn't in the daily snapshot, which follows the newest sets, so there's no chart for it. The averages show its recent direction."));
+    return box;
+  }
+  const W = 600, H = 150, lo = Math.min(...pts.map((p) => p[1])), hi = Math.max(...pts.map((p) => p[1]));
+  const span = hi - lo || hi || 1, x0 = pts[0][0], xs = pts[pts.length - 1][0] - x0 || 1;
+  const X = (i) => (i - x0) / xs * W, Y = (v) => H - 8 - (v - lo) / span * (H - 16);
+  const path = pts.map(([i, v], k) => (k ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+  const svg = document.createElementNS(SVG, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Price from " + money(pts[0][1], cur) + " to " + money(pts[pts.length - 1][1], cur));
+  const add = (tag, attrs) => { const n = document.createElementNS(SVG, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); svg.appendChild(n); };
+  [8, H / 2, H - 8].forEach((y) => add("line", { class: "grid", x1: 0, x2: W, y1: y, y2: y }));
+  add("path", { class: "area", d: path + " L" + W + " " + H + " L0 " + H + " Z" });
+  add("path", { class: "line", d: path });
+  box.appendChild(svg);
+  const axis = el("div", "axis num");
+  axis.append(el("span", null, h.dates[pts[0][0]] + " · " + money(pts[0][1], cur)),
+    el("span", null, "Low " + money(lo, cur) + " · High " + money(hi, cur)),
+    el("span", null, h.dates[pts[pts.length - 1][0]] + " · " + money(pts[pts.length - 1][1], cur)));
+  box.appendChild(axis);
+  return box;
+}
+
 function detail(c) {
   const d = el("div", "detail");
+  d.appendChild(image(c, "high"));
+  const panels = el("div", "panels");
 
   const left = el("div");
   left.appendChild(el("h3", null, "Cardmarket average sale (EUR)"));
   const max = Math.max(c.avg30 || 0, c.avg7 || 0, c.avg1 || 0);
   if (max) [["30 days", c.avg30], ["7 days", c.avg7], ["1 day", c.avg1]].forEach(([label, v]) => {
-    const a = el("div", "avg");
-    const track = el("div", "track"), fill = el("div", "fill");
+    const a = el("div", "avg"), track = el("div", "track"), fill = el("div", "fill");
     fill.style.width = (v ? v / max * 100 : 0) + "%";
     track.appendChild(fill);
     a.append(el("span", null, label), track, el("span", "num", money(v, "EUR")));
@@ -348,8 +459,7 @@ function detail(c) {
   const right = el("div");
   right.appendChild(el("h3", null, "TCGplayer listings (USD)"));
   if (c.variants.length) c.variants.forEach((v) => {
-    const r = el("div", "range");
-    const label = el("div", "label");
+    const r = el("div", "range"), label = el("div", "label");
     label.append(el("span", null, v.key.replace(/([A-Z])/g, " $1").replace(/-/g, " ")), el("b", "num", "Market " + money(v.market, "USD")));
     r.appendChild(label);
     if (v.low && v.high && v.high > v.low) {
@@ -364,47 +474,75 @@ function detail(c) {
   });
   else right.appendChild(el("p", "sub", "TCGplayer has no listing for this card."));
 
-  const read = el("p", "read");
+  const read = el("p", "read wide");
   if (c.move == null) read.textContent = "There isn't enough sales history to say which way this card is moving.";
   else {
     const dir = c.move >= .05 ? "higher than" : c.move <= -.05 ? "lower than" : "about level with";
     read.append("Over the last week this card sold ", el("b", null, pct(c.move)), " " + dir + " its 30-day average.");
-    if (c.day != null) read.append(" Yesterday's sales were ", el("b", null, pct(c.day)), " against the weekly average.");
+    if (c.day != null) read.append(" The latest day's sales were ", el("b", null, pct(c.day)), " against the weekly average.");
   }
 
-  const actions = el("div", "actions");
-  const w = el("button", "watch mono", watch.has(c.id) ? "★ Watching" : "☆ Watch");
+  const actions = el("div", "actions wide");
+  const w = el("button", "ghost watch mono", watch.has(c.id) ? "★ Watching" : "☆ Watch");
   w.type = "button";
   w.setAttribute("aria-pressed", String(watch.has(c.id)));
-  w.addEventListener("click", () => {
-    watch.has(c.id) ? watch.delete(c.id) : watch.add(c.id);
-    saveWatch();
-    if (state.view === "watch") state.cards = state.cards.filter((x) => watch.has(x.id));
-    render();
-  });
-  const stamps = [c.tpUpdated && "TCGplayer " + new Date(c.tpUpdated).toLocaleString(), c.cmUpdated && "Cardmarket " + new Date(c.cmUpdated).toLocaleString()].filter(Boolean);
-  actions.append(w, el("span", "stamp", stamps.length ? "Prices updated: " + stamps.join(" · ") : ""));
+  w.addEventListener("click", () => { watch.has(c.id) ? watch.delete(c.id) : watch.add(c.id); saveWatch(); renderList(); });
+  actions.appendChild(w);
 
-  d.append(left, right, read, actions);
+  panels.append(chart(c), left, right, read, actions);
+  d.appendChild(panels);
   return d;
 }
 
-function setView(v) {
-  state.view = v;
-  $("tabSearch").setAttribute("aria-pressed", String(v === "search"));
-  $("tabWatch").setAttribute("aria-pressed", String(v === "watch"));
-  v === "watch" ? loadWatchlist() : search($("q").value.trim() || "Charizard");
+/* ---------- Live lookups ---------- */
+async function loadCards(ids) {
+  const done = await Promise.allSettled(ids.map((id) => getJSON(API + "/cards/" + encodeURIComponent(id))));
+  return done.filter((r) => r.status === "fulfilled" && r.value && r.value.id).map((r) => fromApi(r.value));
 }
-$("tabSearch").addEventListener("click", () => setView("search"));
-$("tabWatch").addEventListener("click", () => setView("watch"));
-$("sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+async function search(name) {
+  showList('Results for "' + name + '"', [], null, "price");
+  state.loading = true; renderList();
+  try {
+    const list = await getJSON(API + "/cards?name=" + encodeURIComponent(name));
+    const cards = await loadCards(list.slice(0, MAX_CARDS).map((c) => c.id));
+    state.empty = 'No cards found named "' + name + '". Check the spelling or try a shorter name.';
+    if (list.length > cards.length && cards.length) state.title = 'Results for "' + name + '" (first ' + cards.length + " of " + list.length + ")";
+    state.cards = cards;
+  } catch (err) {
+    state.cards = [];
+    state.empty = "The price feed couldn't be reached. Check your connection and try again.";
+  }
+  state.loading = false; renderList();
+}
+async function showWatchlist() {
+  showList("Watchlist", [], null, "price");
+  $("watchBtn").setAttribute("aria-pressed", "true");
+  state.empty = "Your watchlist is empty. Open any card and choose Watch to keep it here.";
+  if (!watch.size) { renderList(); return; }
+  state.loading = true; renderList();
+  try { state.cards = await loadCards([...watch]); }
+  catch (err) { state.empty = "The price feed couldn't be reached. Check your connection and try again."; }
+  state.loading = false; renderList();
+}
+
 $("form").addEventListener("submit", (e) => {
   e.preventDefault();
   const name = $("q").value.trim();
-  if (name) setView("search");
+  $("watchBtn").setAttribute("aria-pressed", "false");
+  if (name) search(name);
 });
+$("watchBtn").addEventListener("click", showWatchlist);
+$("back").addEventListener("click", showOverview);
+$("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
 
-search("Charizard");
+(async function start() {
+  try {
+    const m = await getJSON(DATA + "market.json");
+    m.cards = m.cards.map(fromSnapshot);
+    state.market = m;
+  } catch (err) { state.market = null; }
+  renderOverview();
+})();
 </script>
 </body>
 </html>

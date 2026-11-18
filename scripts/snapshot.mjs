@@ -2,12 +2,12 @@
    Runs on GitHub's servers (see .github/workflows/market-data.yml), not in the browser.
    It reads prices for every card in the newest sets from the TCGdex API and writes:
      data/market.json       today's prices, used by the market overview
-     data/history.json      one price per card per day, used by the trend charts
+     data/history/<set>.json  one price per card per day, used by the trend charts
      data/sample-card.json  one untouched API response, kept for debugging           */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const API = "https://api.tcgdex.net/v2/en";
-const LATEST_SETS = 6;        // how many of the newest sets to track
+const LATEST_SETS = 24;       // how many of the newest sets to track
 const EXTRA_SETS = [];        // extra set ids to always track, e.g. ["swsh3"]
 const SKIP_SERIES = ["tcgp"]; // digital-only sets with no market prices
 const HISTORY_DAYS = 400;
@@ -89,22 +89,27 @@ if (!cards.length) { console.error("No priced cards found. Nothing written."); p
 await writeFile("data/market.json", JSON.stringify({ updated: new Date().toISOString(), sets, cards }));
 await writeFile("data/sample-card.json", JSON.stringify(sample, null, 2));
 
-// 4. Add today's column to the price history.
-let history = { dates: [], usd: {}, eur: {} };
-try { history = JSON.parse(await readFile("data/history.json", "utf8")); } catch (err) {}
-if (history.dates[history.dates.length - 1] !== today) history.dates.push(today);
-const len = history.dates.length, col = len - 1;
-for (const key of ["usd", "eur"]) {
-  const map = history[key] || (history[key] = {});
-  for (const c of cards) (map[c.id] || (map[c.id] = []))[col] = c[key];
-  for (const id of Object.keys(map)) {
-    const arr = map[id];
+// 4. Add today's column to each set's price history (US dollars when available, otherwise euros).
+await mkdir("data/history", { recursive: true });
+for (const set of sets) {
+  const file = "data/history/" + set.id + ".json";
+  let h = { dates: [], cur: {}, p: {} };
+  try { h = JSON.parse(await readFile(file, "utf8")); } catch (err) {}
+  if (h.dates[h.dates.length - 1] !== today) h.dates.push(today);
+  const len = h.dates.length, col = len - 1;
+  for (const c of cards) {
+    if (c.sid !== set.id) continue;
+    const cur = h.cur[c.id] || (h.cur[c.id] = c.usd != null ? "USD" : "EUR");
+    (h.p[c.id] || (h.p[c.id] = []))[col] = cur === "USD" ? c.usd : c.eur;
+  }
+  for (const id of Object.keys(h.p)) {
+    const arr = h.p[id];
     for (let i = 0; i < len; i++) if (arr[i] === undefined) arr[i] = null;
     arr.length = len;
-    if (len > HISTORY_DAYS) map[id] = arr.slice(len - HISTORY_DAYS);
+    if (len > HISTORY_DAYS) h.p[id] = arr.slice(len - HISTORY_DAYS);
   }
+  if (len > HISTORY_DAYS) h.dates = h.dates.slice(len - HISTORY_DAYS);
+  await writeFile(file, JSON.stringify(h));
 }
-if (len > HISTORY_DAYS) history.dates = history.dates.slice(len - HISTORY_DAYS);
-await writeFile("data/history.json", JSON.stringify(history));
 
 console.log("Wrote", cards.length, "cards from", sets.length, "sets for", today);

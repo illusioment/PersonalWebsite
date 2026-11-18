@@ -24,7 +24,7 @@ window.HUB = {
   ],
 
   apps: [
-    { name: "Card Market Analyzer", desc: "Live Pokémon card prices and 30-day price trends.", category: "tools", url: "tools/card-market/", status: "live data" },
+    { name: "Card Market", desc: "Pokémon card prices, market movers and price trends.", category: "tools", url: "tools/card-market/", status: "live data" },
 
     // Copy this line, remove the two slashes, and fill it in:
     // { name: "My App", desc: "What it does in one sentence.", category: "tools", url: "tools/my-app/", status: "new" },
