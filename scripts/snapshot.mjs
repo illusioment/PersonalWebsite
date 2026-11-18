@@ -13,7 +13,7 @@ const LATEST_SETS = 24;       // how many of the newest sets to track
 const EXTRA_SETS = [];        // extra set ids to always track, e.g. ["swsh3"]
 const SKIP_SERIES = ["tcgp"]; // digital-only sets with no market prices
 const HISTORY_DAYS = 400;
-const HIDE_CHANGES = /flashing/i; // changes that should not appear in the public what's-new log
+const HIDE_CHANGES = /flashing|work app|change log/i; // changes that should not appear in the public what's-new log
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const pos = (v) => (typeof v === "number" && v > 0 ? v : null);
