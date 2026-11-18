@@ -16,10 +16,10 @@
   // Tunable balance numbers. Each stat point is meant to be worth about the same.
   var B = {
     hpBase: 70, hpPer: 12,
-    speedBase: 22, speedPer: 18,
-    dmgBase: 14, dmgPer: 1.8,
+    speedBase: 22, speedPer: 19,
+    dmgBase: 38, dmgPer: 4.9,
     rateBase: 0.6, ratePer: 0.095,
-    rangeBase: 135, rangePer: 11,
+    rangeBase: 140, rangePer: 9.5,
     shellBase: 120, shellPer: 16,
     spreadBase: 0.45, spreadPer: 0.03,
     turretBase: 1.4, turretPer: 0.32,
@@ -106,7 +106,7 @@
     var w = opts.w || (n <= 2 ? 760 : Math.min(1200, 760 + (n - 2) * 45));
     var h = opts.h || (n <= 2 ? 460 : Math.min(760, 460 + (n - 2) * 30));
     var rand = rng(seed);
-    var S = { w: w, h: h, t: 0, limit: opts.limit || (n <= 2 ? 60 : 100), rand: rand, tanks: [], shells: [], over: false, order: [], winner: null };
+    var S = { w: w, h: h, t: 0, limit: opts.limit || (n <= 2 ? 45 : 75), rand: rand, tanks: [], shells: [], events: [], over: false, order: [], winner: null };
     var offset = rand() * Math.PI * 2;
     tanks.forEach(function (rec, i) {
       var d = derive(rec.stats);
@@ -141,6 +141,7 @@
     if (S.over) return;
     var rand = S.rand, alive = 0, i;
     S.t += DT;
+    S.events.length = 0;   // what happened this tick, for the viewer's effects and sound
 
     for (i = 0; i < S.tanks.length; i++) {
       var me = S.tanks[i];
@@ -193,7 +194,8 @@
         var foeSpeed = Math.hypot(foe.vx, foe.vy);
         var a = me.turret + g * me.d.spread * (1 + B.aimPenalty * dodge * (mag > 0.05 ? 1 : 0)) * (1 + B.evade * foeSpeed / 150);
         S.shells.push({ x: me.x + Math.cos(a) * RADIUS, y: me.y + Math.sin(a) * RADIUS, a: a, v: me.d.shellSpeed, left: me.d.range * 1.15, reach: me.d.range * 1.15, from: i, dmg: me.d.damage });
-        me.cool = me.d.cooldown; me.shots++;
+        me.cool = me.d.cooldown; me.shots++; me.fired = S.t;
+        S.events.push({ type: "shot", x: me.x + Math.cos(a) * 24, y: me.y + Math.sin(a) * 24, a: a, by: i });
       }
     }
 
@@ -209,7 +211,8 @@
           var dmg = s.dmg * (1 - B.falloff * (1 - s.left / s.reach));
           t.hp -= dmg; gone = true;
           var shooter = S.tanks[s.from]; shooter.hits++; shooter.dealt += dmg;
-          if (t.hp <= 0) { t.hp = 0; t.alive = false; S.order.push(j); alive--; }
+          S.events.push({ type: "hit", x: s.x, y: s.y, dmg: dmg, on: j });
+          if (t.hp <= 0) { t.hp = 0; t.alive = false; S.order.push(j); alive--; S.events.push({ type: "dead", x: t.x, y: t.y, on: j, by: s.from }); shooter.kills = (shooter.kills || 0) + 1; }
           break;
         }
       }

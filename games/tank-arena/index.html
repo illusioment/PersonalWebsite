@@ -66,7 +66,7 @@ h2 { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin
 .empty { color: var(--muted); font-size: 14.5px; margin: 0 0 8px; }
 
 .fields { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-bottom: 20px; }
-.fields input[type="text"] { width: 100%; }
+.fields input[type="text"] { flex: 1; min-width: 0; }
 .swatches { display: flex; gap: 6px; align-items: center; }
 .swatch { width: 28px; height: 28px; border-radius: 8px; border: 2px solid transparent; padding: 0; }
 .swatch[aria-pressed="true"] { border-color: var(--text); }
@@ -90,7 +90,16 @@ input[type="range"] { width: 100%; accent-color: var(--sun); margin: 0; }
 .stage { margin-top: 16px; }
 .stage-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
 .stage-bar .spacer { flex: 1; }
-canvas { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
+canvas.field { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 16px; margin-bottom: 12px; }
+.rrow { display: grid; grid-template-columns: 14px minmax(0, 1fr) 70px 22px; gap: 8px; align-items: center; font-size: 13.5px; }
+.rrow.out { opacity: .4; text-decoration: line-through; }
+.rname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rbar { height: 6px; border-radius: 3px; background: rgba(42, 90, 75, .5); overflow: hidden; }
+.rfill { height: 100%; border-radius: 3px; transition: width .12s linear; }
+.rk { color: var(--sun); font-size: 12px; }
+.stage-bar #testSpeed, .stage-bar #duelSpeed, .stage-bar #arenaSpeed { display: flex; flex-wrap: wrap; gap: 6px; }
+.preview { width: 96px; height: 72px; flex: none; border-radius: 10px; background: var(--floor); border: 1px solid var(--line); }
 .result { margin: 12px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 20px; color: var(--muted); font-size: 14.5px; }
 .result li { display: flex; align-items: center; gap: 8px; }
 .result b { color: var(--text); font-weight: 600; }
@@ -150,7 +159,10 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 
       <div class="panel" id="editor">
         <div class="fields">
-          <input type="text" id="tname" placeholder="Tank name" maxlength="24" aria-label="Tank name">
+          <div style="display: flex; gap: 12px; align-items: center; min-width: 0">
+            <canvas class="preview" id="preview" width="192" height="144" aria-hidden="true"></canvas>
+            <input type="text" id="tname" placeholder="Tank name" maxlength="24" aria-label="Tank name">
+          </div>
           <div class="swatches" id="swatches" role="group" aria-label="Colour"></div>
         </div>
 
@@ -191,7 +203,8 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 
         <div class="stage" id="testStage" hidden>
           <div class="stage-bar"><span class="mono" id="testLabel" style="color: var(--muted)"></span><span class="spacer"></span><span id="testSpeed"></span></div>
-          <canvas id="testCanvas" width="760" height="460"></canvas>
+          <div class="roster" id="testRoster"></div>
+          <canvas class="field" id="testCanvas" width="760" height="460"></canvas>
           <ul class="result" id="testResult"></ul>
         </div>
       </div>
@@ -213,7 +226,8 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
       </div>
       <div class="stage" id="duelStage" hidden>
         <div class="stage-bar"><span class="mono" id="duelLabel" style="color: var(--muted)"></span><span class="spacer"></span><span id="duelSpeed"></span></div>
-        <canvas id="duelCanvas" width="760" height="460"></canvas>
+        <div class="roster" id="duelRoster"></div>
+        <canvas class="field" id="duelCanvas" width="760" height="460"></canvas>
         <ul class="result" id="duelResult"></ul>
       </div>
     </div>
@@ -229,7 +243,8 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
         <span class="mono" id="arenaLabel" style="color: var(--muted)"></span>
         <span class="spacer"></span><span id="arenaSpeed"></span>
       </div>
-      <canvas id="arenaCanvas" width="980" height="620"></canvas>
+      <div class="roster" id="arenaRoster"></div>
+      <canvas class="field" id="arenaCanvas" width="980" height="620"></canvas>
       <ul class="result" id="arenaResult"></ul>
     </div>
   </section>
@@ -401,7 +416,15 @@ function renderGarage() {
   $("del").hidden = !d.id;
   $("save").disabled = !state.player;
 }
+function renderPreview() {
+  const c = $("preview"), ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.save(); ctx.translate(c.width / 2 - 8, c.height / 2); ctx.scale(2.6, 2.6);
+  drawTank(ctx, state.draft, -0.35, -0.1, {});
+  ctx.restore();
+}
 function renderBudget() {
+  renderPreview();
   const used = T.spent(state.draft.stats), left = T.BUDGET - used;
   $("budgetFill").style.width = used / T.BUDGET * 100 + "%";
   $("budgetText").textContent = left === 0 ? "All " + T.BUDGET + " spent" : left + " of " + T.BUDGET + " left";
@@ -456,69 +479,259 @@ $("test").addEventListener("click", () => {
   $("testCanvas").scrollIntoView({ block: "nearest", behavior: "smooth" });
 });
 
+/* ================= sound (tiny synth, no audio files) ================= */
+const Sound = {
+  on: true, ctx: null, last: {},
+  init() { try { this.on = localStorage.getItem("tank-arena-sound") !== "off"; } catch (e) {} },
+  toggle() { this.on = !this.on; try { localStorage.setItem("tank-arena-sound", this.on ? "on" : "off"); } catch (e) {} },
+  wake() {   // browsers only allow audio after a click
+    if (!this.on) return;
+    try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); if (this.ctx.state === "suspended") this.ctx.resume(); } catch (e) { this.ctx = null; }
+  },
+  play(kind) {
+    const c = this.ctx;
+    if (!this.on || !c || c.state !== "running") return;
+    const now = c.currentTime;
+    if (now - (this.last[kind] || 0) < (kind === "shot" ? 0.05 : 0.03)) return;   // don't stack identical sounds
+    this.last[kind] = now;
+    const gain = c.createGain(); gain.connect(c.destination);
+    if (kind === "boom") {
+      const len = 0.5, buf = c.createBuffer(1, c.sampleRate * len, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2.2);
+      const src = c.createBufferSource(), lp = c.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.setValueAtTime(900, now); lp.frequency.exponentialRampToValueAtTime(120, now + len);
+      src.buffer = buf; src.connect(lp); lp.connect(gain); gain.gain.value = 0.32; src.start(now);
+    } else {
+      const o = c.createOscillator();
+      o.type = kind === "shot" ? "square" : "triangle";
+      const f0 = kind === "shot" ? 190 : 620, f1 = kind === "shot" ? 55 : 240, len = kind === "shot" ? 0.09 : 0.05;
+      o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now + len);
+      gain.gain.setValueAtTime(kind === "shot" ? 0.05 : 0.04, now); gain.gain.exponentialRampToValueAtTime(0.0001, now + len);
+      o.connect(gain); o.start(now); o.stop(now + len);
+    }
+  }
+};
+Sound.init();
+
 /* ================= battle viewer ================= */
+/* Tanks are drawn from their build: more armor = bigger hull, more barrel = longer gun,
+   more firepower = thicker gun, more engine = wider treads. */
+function drawTank(ctx, rec, body, turret, o) {
+  o = o || {};
+  const s = rec.stats, L = 25 + s.armor * 1.0, W = 17 + s.armor * 0.75, tread = 4 + s.engine * 0.3;
+  const gunL = 13 + s.barrel * 1.5, gunW = 3 + s.firepower * 0.4, dome = 6 + s.targeting * 0.25;
+  const dark = "#04110E", recoil = o.recoil || 0;
+  ctx.save(); ctx.rotate(body);
+  ctx.fillStyle = "rgba(0,0,0,.28)"; ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -W / 2 - tread + 4, L, W + tread * 2, 5); ctx.fill();   // shadow
+  ctx.fillStyle = "#1B2B27"; ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
+  [-1, 1].forEach((side) => {
+    const y = side < 0 ? -W / 2 - tread + 1 : W / 2 - 1;
+    ctx.beginPath(); ctx.roundRect(-L / 2 - 1, y, L + 2, tread, 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(228,242,230,.22)"; ctx.lineWidth = 1;
+    const shift = ((o.roll || 0) % 5 + 5) % 5;
+    for (let x = -L / 2 + shift; x < L / 2; x += 5) { ctx.beginPath(); ctx.moveTo(x, y + 1); ctx.lineTo(x, y + tread - 1); ctx.stroke(); }
+    ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
+  });
+  ctx.fillStyle = rec.color; ctx.beginPath(); ctx.roundRect(-L / 2, -W / 2, L, W, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,.16)"; ctx.beginPath(); ctx.roundRect(-L / 2 + 2, -W / 2 + 2, L - 4, W * 0.32, 2); ctx.fill();
+  ctx.fillStyle = "rgba(4,17,14,.35)"; ctx.fillRect(L / 2 - 6, -W / 2 + 3, 3, W - 6);    // front marker
+  ctx.restore();
+  ctx.save(); ctx.rotate(turret);
+  ctx.fillStyle = "#22332F"; ctx.strokeStyle = dark; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(dome - 2 - recoil, -gunW / 2, gunL, gunW, 1.5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = dark; ctx.fillRect(dome - 2 - recoil + gunL - 3, -gunW / 2 - 1, 3, gunW + 2);   // muzzle
+  ctx.fillStyle = rec.color; ctx.beginPath(); ctx.arc(0, 0, dome, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,.2)"; ctx.beginPath(); ctx.arc(-dome * 0.25, -dome * 0.25, dome * 0.45, 0, 6.283); ctx.fill();
+  ctx.restore();
+}
+
 function play(key, tanks, seed) {
   const canvas = $(key + "Canvas"), ctx = canvas.getContext("2d");
   if (state.viewers[key]) cancelAnimationFrame(state.viewers[key].raf);
+  Sound.wake();
   const S = T.create(tanks, seed);
   canvas.width = S.w; canvas.height = S.h;
-  const v = state.viewers[key] = { S, speed: (state.viewers[key] && state.viewers[key].speed) || 1, acc: 0, last: performance.now(), raf: 0 };
+  const ground = document.createElement("canvas");   // scorch marks and tread tracks build up here
+  ground.width = S.w; ground.height = S.h;
+  const v = state.viewers[key] = { S, ground, gctx: ground.getContext("2d"), fx: [], shake: 0, clock: 0, speed: (state.viewers[key] && state.viewers[key].speed) || 1, acc: 0, last: performance.now(), raf: 0, shown: S.tanks.map((t) => t.hp) };
   $(key + "Label").textContent = tanks.length === 2 ? tanks[0].name + " vs " + tanks[1].name : tanks.length + " tanks";
   $(key + "Result").textContent = "";
-  const sp = $(key + "Speed");
-  sp.textContent = "";
-  [1, 2, 4].forEach((n) => {
-    const b = el("button", "btn mono", n + "×");
-    b.type = "button"; b.setAttribute("aria-pressed", String(v.speed === n));
-    b.addEventListener("click", () => { v.speed = n; [...sp.children].forEach((c) => c.setAttribute("aria-pressed", String(c === b))); });
-    sp.appendChild(b);
-  });
+  buildControls(key, v);
+  buildRoster(key, v);
+
   function frame(now) {
-    v.acc += Math.min(0.1, (now - v.last) / 1000) * v.speed; v.last = now;
-    while (v.acc >= T.DT && !S.over) { T.step(S); v.acc -= T.DT; }
-    draw(ctx, S);
-    if (!S.over) v.raf = requestAnimationFrame(frame);
-    else showResult(key, S);
+    const real = Math.min(0.1, (now - v.last) / 1000); v.last = now;
+    v.acc += real * v.speed;
+    let ticks = 0;
+    while (v.acc >= T.DT && !S.over && ticks < 12) { T.step(S); v.acc -= T.DT; ticks++; absorb(v); }
+    v.clock += real * v.speed;
+    render(ctx, v, real * v.speed);
+    updateRoster(key, v);
+    if (!S.over || v.fx.length) v.raf = requestAnimationFrame(frame);
+    if (S.over && !v.done) { v.done = true; showResult(key, S); }
   }
   v.raf = requestAnimationFrame(frame);
 }
-function draw(ctx, S) {
-  const css = getComputedStyle(document.documentElement), line = css.getPropertyValue("--line").trim(), text = css.getPropertyValue("--text").trim();
+
+/* Turn this tick's simulation events into particles, marks and sound. */
+function absorb(v) {
+  const S = v.S, fx = v.fx, rnd = Math.random;
+  S.tanks.forEach((t) => {
+    if (!t.alive) return;
+    if (Math.hypot(t.vx, t.vy) > 8 && rnd() < 0.5) {
+      v.gctx.save(); v.gctx.translate(t.x, t.y); v.gctx.rotate(t.body);
+      v.gctx.fillStyle = "rgba(4,17,14,.16)"; v.gctx.fillRect(-14, -13, 3, 4); v.gctx.fillRect(-14, 9, 3, 4);
+      v.gctx.restore();
+    }
+    if (t.hp / t.d.hp < 0.4 && rnd() < 0.35) fx.push({ k: "smoke", x: t.x + (rnd() - .5) * 8, y: t.y + (rnd() - .5) * 8, vx: (rnd() - .5) * 10, vy: -14 - rnd() * 10, life: 0.9, max: 0.9, r: 4 + rnd() * 3 });
+  });
+  S.events.forEach((e) => {
+    if (e.type === "shot") {
+      fx.push({ k: "flash", x: e.x, y: e.y, a: e.a, life: 0.09, max: 0.09 });
+      Sound.play("shot");
+    } else if (e.type === "hit") {
+      for (let i = 0; i < 7; i++) { const a = rnd() * 6.283, sp = 40 + rnd() * 110; fx.push({ k: "spark", x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.25 + rnd() * 0.2, max: 0.45 }); }
+      fx.push({ k: "num", x: e.x, y: e.y - 14, vy: -26, life: 0.7, max: 0.7, text: "-" + Math.round(e.dmg) });
+      Sound.play("hit");
+    } else if (e.type === "dead") {
+      const color = S.tanks[e.on].rec.color;
+      fx.push({ k: "ring", x: e.x, y: e.y, life: 0.45, max: 0.45 });
+      for (let i = 0; i < 26; i++) { const a = rnd() * 6.283, sp = 50 + rnd() * 200; fx.push({ k: "debris", x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5 + rnd() * 0.5, max: 1, color: i % 3 ? "#F4C453" : color, r: 2 + rnd() * 3 }); }
+      for (let i = 0; i < 8; i++) fx.push({ k: "smoke", x: e.x + (rnd() - .5) * 20, y: e.y + (rnd() - .5) * 20, vx: (rnd() - .5) * 20, vy: -18 - rnd() * 16, life: 1.3, max: 1.3, r: 8 + rnd() * 8 });
+      const g = v.gctx.createRadialGradient(e.x, e.y, 2, e.x, e.y, 34);
+      g.addColorStop(0, "rgba(0,0,0,.6)"); g.addColorStop(1, "rgba(0,0,0,0)");
+      v.gctx.fillStyle = g; v.gctx.beginPath(); v.gctx.arc(e.x, e.y, 34, 0, 6.283); v.gctx.fill();
+      v.shake = 0.3;
+      Sound.play("boom");
+    }
+  });
+  if (fx.length > 600) fx.splice(0, fx.length - 600);
+}
+
+function render(ctx, v, dt) {
+  const S = v.S;
+  ctx.save();
   ctx.clearRect(0, 0, S.w, S.h);
-  ctx.strokeStyle = "rgba(42,90,75,.35)"; ctx.lineWidth = 1;
+  if (v.shake > 0) { v.shake -= dt; const m = v.shake * 22; ctx.translate((Math.random() - .5) * m, (Math.random() - .5) * m); }
+
+  // floor
+  ctx.strokeStyle = "rgba(42,90,75,.28)"; ctx.lineWidth = 1;
   for (let x = 40; x < S.w; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, S.h); ctx.stroke(); }
   for (let y = 40; y < S.h; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(S.w, y); ctx.stroke(); }
-  S.tanks.forEach((t) => {
+  ctx.strokeStyle = "rgba(244,196,83,.25)"; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, S.w - 3, S.h - 3);
+  ctx.drawImage(v.ground, 0, 0);
+
+  // wrecks first, then living tanks on top
+  S.tanks.slice().sort((a, b) => a.alive - b.alive).forEach((t) => {
     ctx.save(); ctx.translate(t.x, t.y);
-    ctx.globalAlpha = t.alive ? 1 : 0.22;
-    ctx.save(); ctx.rotate(t.body);
-    ctx.fillStyle = t.rec.color; ctx.strokeStyle = "#04110E"; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.roundRect(-15, -11, 30, 22, 4); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = "rgba(4,17,14,.45)"; ctx.fillRect(-15, -11, 30, 4); ctx.fillRect(-15, 7, 30, 4);
-    ctx.restore();
-    ctx.save(); ctx.rotate(t.turret);
-    ctx.strokeStyle = "#04110E"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, 0); ctx.stroke();
-    ctx.strokeStyle = t.rec.color; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(22, 0); ctx.stroke();
-    ctx.fillStyle = t.rec.color; ctx.strokeStyle = "#04110E"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.restore();
-    if (t.alive) {
-      ctx.fillStyle = "rgba(4,17,14,.8)"; ctx.fillRect(-18, -26, 36, 5);
-      const f = t.hp / t.d.hp;
-      ctx.fillStyle = f > 0.5 ? "#7BE0A0" : f > 0.25 ? "#F4C453" : "#FF8F7A"; ctx.fillRect(-18, -26, 36 * f, 5);
+    if (!t.alive) {
+      ctx.globalAlpha = 0.5; ctx.filter = "grayscale(1) brightness(.5)";
+      drawTank(ctx, t.rec, t.body, t.turret + 0.5, {});
+      ctx.restore(); return;
     }
-    ctx.fillStyle = text; ctx.font = "12px Sora, sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(t.rec.name, 0, 34);
+    const since = S.t - (t.fired == null ? -9 : t.fired);
+    drawTank(ctx, t.rec, t.body, t.turret, { recoil: since < 0.14 ? (1 - since / 0.14) * 5 : 0, roll: (t.x + t.y) * 0.7 });
     ctx.restore();
   });
-  ctx.fillStyle = "#FFF3C4";
-  S.shells.forEach((s) => { ctx.beginPath(); ctx.arc(s.x, s.y, 2.6, 0, 6.283); ctx.fill(); });
-  ctx.fillStyle = line; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.textAlign = "left";
-  ctx.fillStyle = "rgba(147,181,165,.9)"; ctx.fillText(S.t.toFixed(1) + "s", 10, 18);
-  if (S.over) {
-    ctx.fillStyle = "rgba(7,26,22,.72)"; ctx.fillRect(0, S.h / 2 - 34, S.w, 68);
-    ctx.fillStyle = "#F4C453"; ctx.font = "600 24px Unbounded, sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(S.winner == null ? "Draw" : S.tanks[S.winner].rec.name + " wins", S.w / 2, S.h / 2 + 8);
+
+  // shells with trails
+  S.shells.forEach((s) => {
+    const tx = s.x - Math.cos(s.a) * 16, ty = s.y - Math.sin(s.a) * 16;
+    const g = ctx.createLinearGradient(tx, ty, s.x, s.y);
+    g.addColorStop(0, "rgba(255,243,196,0)"); g.addColorStop(1, "rgba(255,243,196,.9)");
+    ctx.strokeStyle = g; ctx.lineWidth = 2.6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(s.x, s.y); ctx.stroke();
+    ctx.fillStyle = "#FFFFFF"; ctx.beginPath(); ctx.arc(s.x, s.y, 2.4, 0, 6.283); ctx.fill();
+  });
+
+  // effects
+  for (let i = v.fx.length - 1; i >= 0; i--) {
+    const p = v.fx[i];
+    p.life -= dt;
+    if (p.life <= 0) { v.fx.splice(i, 1); continue; }
+    const f = p.life / p.max;
+    if (p.vx != null) { p.x += p.vx * dt; p.vx *= 0.94; }
+    if (p.vy != null) { p.y += p.vy * dt; if (p.k !== "num" && p.k !== "smoke") p.vy *= 0.94; }
+    if (p.k === "flash") {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = f;
+      ctx.fillStyle = "#FFF3C4"; ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(16, 0); ctx.lineTo(0, 4); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#F4C453"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 6.283); ctx.fill(); ctx.restore();
+    } else if (p.k === "spark") {
+      ctx.globalAlpha = f; ctx.fillStyle = "#FFE08A"; ctx.fillRect(p.x - 1.2, p.y - 1.2, 2.4, 2.4); ctx.globalAlpha = 1;
+    } else if (p.k === "debris") {
+      ctx.globalAlpha = Math.min(1, f * 1.4); ctx.fillStyle = p.color; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r); ctx.globalAlpha = 1;
+    } else if (p.k === "smoke") {
+      ctx.globalAlpha = f * 0.32; ctx.fillStyle = "#9AA8A3"; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1.6 - f * 0.6), 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+    } else if (p.k === "ring") {
+      ctx.globalAlpha = f; ctx.strokeStyle = "#FFF3C4"; ctx.lineWidth = 5 * f + 1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 64 + 8, 0, 6.283); ctx.stroke();
+      ctx.fillStyle = "rgba(244,196,83," + (f * 0.55).toFixed(3) + ")"; ctx.beginPath(); ctx.arc(p.x, p.y, (1 - f) * 40 + 6, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+    } else if (p.k === "num") {
+      ctx.globalAlpha = Math.min(1, f * 2); ctx.fillStyle = "#FF8F7A"; ctx.font = "600 13px 'IBM Plex Mono', monospace"; ctx.textAlign = "center";
+      ctx.fillText(p.text, p.x, p.y); ctx.globalAlpha = 1;
+    }
   }
+
+  // name tags and health bars above everything
+  S.tanks.forEach((t, i) => {
+    if (!t.alive) return;
+    v.shown[i] += (t.hp - v.shown[i]) * Math.min(1, dt * 6);       // the pale bar trails behind recent damage
+    const f = t.hp / t.d.hp, g = Math.max(f, v.shown[i] / t.d.hp), w = 40, x = t.x - w / 2, y = t.y - 34;
+    ctx.fillStyle = "rgba(4,17,14,.85)"; ctx.beginPath(); ctx.roundRect(x - 1, y - 1, w + 2, 7, 3); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(x, y, w * g, 5);
+    ctx.fillStyle = f > 0.5 ? "#7BE0A0" : f > 0.25 ? "#F4C453" : "#FF8F7A"; ctx.fillRect(x, y, w * f, 5);
+    ctx.font = "600 12px Sora, sans-serif"; ctx.textAlign = "center";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(4,17,14,.9)"; ctx.strokeText(t.rec.name, t.x, y - 6);
+    ctx.fillStyle = "#E4F2E6"; ctx.fillText(t.rec.name, t.x, y - 6);
+  });
+  ctx.restore();
+
+  ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.textAlign = "left"; ctx.fillStyle = "rgba(147,181,165,.9)";
+  ctx.fillText(S.t.toFixed(1) + "s", 12, 20);
+  if (S.over) {
+    ctx.fillStyle = "rgba(7,26,22,.78)"; ctx.fillRect(0, S.h / 2 - 44, S.w, 88);
+    ctx.fillStyle = "rgba(244,196,83,.6)"; ctx.fillRect(0, S.h / 2 - 44, S.w, 2); ctx.fillRect(0, S.h / 2 + 42, S.w, 2);
+    const win = S.winner == null ? null : S.tanks[S.winner];
+    ctx.textAlign = "center"; ctx.fillStyle = "#F4C453"; ctx.font = "600 26px Unbounded, sans-serif";
+    ctx.fillText(win ? win.rec.name + " wins" : "Draw", S.w / 2, S.h / 2 + 2);
+    ctx.fillStyle = "#93B5A5"; ctx.font = "13px Sora, sans-serif";
+    ctx.fillText(win ? "built by " + win.rec.owner + " · " + Math.round(win.hp / win.d.hp * 100) + "% health left" : "time ran out with health too close to call", S.w / 2, S.h / 2 + 26);
+  }
+}
+
+function buildControls(key, v) {
+  const sp = $(key + "Speed");
+  sp.textContent = "";
+  const snd = el("button", "btn mono", Sound.on ? "Sound on" : "Sound off");
+  snd.type = "button"; snd.setAttribute("aria-pressed", String(Sound.on));
+  snd.addEventListener("click", () => { Sound.toggle(); Sound.wake(); snd.textContent = Sound.on ? "Sound on" : "Sound off"; snd.setAttribute("aria-pressed", String(Sound.on)); });
+  sp.appendChild(snd);
+  [1, 2, 4].forEach((n) => {
+    const b = el("button", "btn mono", n + "×");
+    b.type = "button"; b.dataset.speed = n; b.setAttribute("aria-pressed", String(v.speed === n));
+    b.addEventListener("click", () => { v.speed = n; sp.querySelectorAll("[data-speed]").forEach((c) => c.setAttribute("aria-pressed", String(c === b))); });
+    sp.appendChild(b);
+  });
+}
+function buildRoster(key, v) {
+  const box = $(key + "Roster");
+  box.textContent = "";
+  v.rows = v.S.tanks.map((t) => {
+    const row = el("div", "rrow"), bar = el("div", "rbar"), fill = el("div", "rfill"), kills = el("span", "num rk", "");
+    bar.appendChild(fill);
+    row.append(dot(t.rec.color), el("span", "rname", t.rec.name), bar, kills);
+    box.appendChild(row);
+    return { row, fill, kills };
+  });
+}
+function updateRoster(key, v) {
+  v.S.tanks.forEach((t, i) => {
+    const r = v.rows[i], f = t.hp / t.d.hp;
+    r.fill.style.width = f * 100 + "%";
+    r.fill.style.background = f > 0.5 ? "var(--leaf)" : f > 0.25 ? "var(--sun)" : "var(--down)";
+    r.row.classList.toggle("out", !t.alive);
+    r.kills.textContent = t.kills ? "×" + t.kills : "";
+  });
 }
 function showResult(key, S) {
   const ul = $(key + "Result");
@@ -527,7 +740,7 @@ function showResult(key, S) {
     const t = S.tanks[i], li = el("li");
     const acc = t.shots ? Math.round(t.hits / t.shots * 100) : 0;
     li.append(el("span", "num", (place + 1) + "."), dot(t.rec.color), el("b", null, t.rec.name),
-      el("span", null, Math.round(t.dealt) + " damage · " + acc + "% hits"));
+      el("span", null, Math.round(t.dealt) + " damage · " + acc + "% hits" + (t.kills ? " · " + t.kills + (t.kills === 1 ? " kill" : " kills") : "")));
     ul.appendChild(li);
   });
 }
