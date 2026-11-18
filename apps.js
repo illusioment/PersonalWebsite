@@ -20,6 +20,7 @@ window.HUB = {
   categories: [
     { id: "games",       name: "Games",       blurb: "Things to play." },
     { id: "tools",       name: "Tools",       blurb: "Things that get a job done." },
+    { id: "work",        name: "Work",        blurb: "Apps built for the day job." },
     { id: "experiments", name: "Experiments", blurb: "Half-finished ideas and odd prototypes." }
   ],
 
