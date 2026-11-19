@@ -1,5 +1,9 @@
 /* ============================================================
-   THE COOKBOOK. Every dinner the planner can offer.
+   THE COOKBOOK. Everything the planner can offer.
+
+   GENRES    the cuisines the menu is grouped by
+   SIDES     side dishes you can add to any dinner
+   COOKBOOK  the main dishes
 
    Amounts are written for 2 servings; the planner scales them.
    Each ingredient: [amount, unit, name, store section, pantry staple?]
@@ -7,341 +11,314 @@
      section: produce, protein, dairy, pantry, bakery
      staple: true for things most kitchens already have (oil, salt, pepper).
              Staples are listed for a pantry check without amounts.
+   Keep ingredient names identical between recipes ("garlic clove", "lemon")
+   so the shopping list can add them together.
    Nutrition is per serving and approximate, estimated from the ingredients.
-   tags: veg, seafood, poultry, meat, plus "weekend" for long cooks.
 
-   To add a dinner, copy one block, give it a new id, and edit.
+   A main dish also has:
+     genre     one of the GENRES ids
+     tags      veg, seafood, poultry, meat, plus "weekend" for long cooks
+     pairs     the side ids suggested for it
+     complete  true when it is a full meal by itself (sides start unticked)
    ============================================================ */
+window.GENRES = [
+  { id: "french",   name: "French Bistro",              blurb: "Pan sauces, butter, and wine." },
+  { id: "italian",  name: "Italian",                    blurb: "Pasta, risotto and trattoria classics." },
+  { id: "asian",    name: "Japanese & East Asian",      blurb: "Glazes, broths and clean, bright flavours." },
+  { id: "med",      name: "Mediterranean & Middle East", blurb: "Herbs, spice, lemon and olive oil." },
+  { id: "american", name: "Pacific Northwest & American", blurb: "Local fish, roasts and comfort." },
+  { id: "latin",    name: "Latin",                      blurb: "Chiles, lime and char." }
+];
+
+window.SIDES = [
+  /* ---------- starches ---------- */
+  { id: "s-parsnip", name: "Parsnip purée", type: "starch", time: 20, kcal: 230, protein: 3, carbs: 36, fat: 9, fiber: 8,
+    ingredients: [[1, "lb", "parsnips", "produce"], [0.25, "cup", "heavy cream", "dairy"], [1, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true]],
+    steps: ["Peel and chop the parsnips. Simmer in salted water until very tender, about 15 minutes.", "Drain and blend with the cream and butter until smooth. Season and keep warm."] },
+  { id: "s-smashed", name: "Crispy smashed potatoes", type: "starch", time: 40, kcal: 230, protein: 4, carbs: 38, fat: 7, fiber: 4,
+    ingredients: [[1, "lb", "baby gold potatoes", "produce"], [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Boil the potatoes in salted water until tender, about 15 minutes. Drain.", "Smash each flat on an oiled tray, drizzle with oil and salt, and roast at 450°F for 20 minutes until crisp."] },
+  { id: "s-dill-potatoes", name: "Buttered new potatoes with dill", type: "starch", time: 20, kcal: 190, protein: 3, carbs: 30, fat: 6, fiber: 3,
+    ingredients: [[0.75, "lb", "new potatoes", "produce"], [1, "", "small bunch dill", "produce"], [1, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true]],
+    steps: ["Boil the potatoes in salted water until a knife slides in, about 15 minutes.", "Drain and toss with the butter and chopped dill."] },
+  { id: "s-polenta", name: "Creamy parmesan polenta", type: "starch", time: 25, kcal: 270, protein: 9, carbs: 40, fat: 8, fiber: 2,
+    ingredients: [[0.75, "cup", "polenta (cornmeal)", "pantry"], [1.5, "oz", "parmesan", "dairy"], [1, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true]],
+    steps: ["Whisk the polenta into 3 cups of simmering salted water.", "Cook on low, stirring often, for 20–25 minutes. Finish with the parmesan and butter."] },
+  { id: "s-rice", name: "Steamed jasmine rice", type: "starch", time: 20, kcal: 250, protein: 5, carbs: 55, fat: 1, fiber: 1,
+    ingredients: [[0.75, "cup", "jasmine rice", "pantry"]],
+    steps: ["Rinse the rice until the water runs clear.", "Simmer covered with 1 cup of water for 12 minutes, then rest off the heat for 8."] },
+  { id: "s-cilantro-rice", name: "Cilantro-lime rice", type: "starch", time: 20, kcal: 270, protein: 5, carbs: 56, fat: 3, fiber: 1,
+    ingredients: [[0.75, "cup", "jasmine rice", "pantry"], [1, "", "small bunch cilantro", "produce"], [1, "", "lime", "produce"], [1, "tbsp", "butter", "dairy", true]],
+    steps: ["Cook the rinsed rice covered with 1 cup of water for 12 minutes, then rest 8.", "Fork through the butter, chopped cilantro, lime zest and juice."] },
+  { id: "s-couscous", name: "Herbed couscous, apricot & pistachio", type: "starch", time: 10, kcal: 380, protein: 11, carbs: 60, fat: 11, fiber: 6,
+    ingredients: [[0.75, "cup", "couscous", "pantry"], [1, "", "small bunch parsley", "produce"], [1, "", "small bunch mint", "produce"], [0.25, "cup", "dried apricots", "pantry"], [0.25, "cup", "pistachios", "pantry"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Pour 1 cup of boiling salted water over the couscous, cover for 5 minutes, then fluff.", "Fold in the chopped herbs, apricots and pistachios, lemon zest and juice, and oil."] },
+  { id: "s-celery-mash", name: "Celery root mash", type: "starch", time: 25, kcal: 230, protein: 4, carbs: 32, fat: 10, fiber: 5,
+    ingredients: [[1, "", "celery root (about 1 lb)", "produce"], [0.5, "lb", "gold potatoes", "produce"], [0.25, "cup", "heavy cream", "dairy"], [1, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true]],
+    steps: ["Peel and cube the celery root and potatoes. Simmer in salted water until tender, about 18 minutes.", "Drain well and mash with the cream and butter."] },
+  { id: "s-bread", name: "Grilled country bread", type: "starch", time: 5, kcal: 220, protein: 7, carbs: 38, fat: 5, fiber: 2,
+    ingredients: [[0.5, "", "baguette or country loaf", "bakery"], [1, "", "garlic clove", "produce"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Brush thick slices with oil and grill or toast until charred at the edges.", "Rub with the cut garlic clove while hot."] },
+  { id: "s-soba", name: "Chilled sesame soba", type: "starch", time: 15, kcal: 400, protein: 18, carbs: 68, fat: 8, fiber: 6,
+    ingredients: [[6, "oz", "soba noodles", "pantry"], [1, "cup", "shelled edamame", "pantry"], [2, "", "scallion", "produce"], [1, "tbsp", "toasted sesame oil", "pantry"], [1, "tbsp", "rice vinegar", "pantry"], [1, "tbsp", "soy sauce", "pantry", true]],
+    steps: ["Cook the soba according to the packet, adding the edamame for the last minute. Rinse under cold water until chilled.", "Toss with the sesame oil, vinegar, soy and sliced scallions."] },
+  { id: "s-white-beans", name: "Garlicky white beans", type: "starch", time: 10, kcal: 200, protein: 11, carbs: 30, fat: 4, fiber: 8,
+    ingredients: [[1, "", "can cannellini beans (15 oz)", "pantry"], [2, "", "garlic clove", "produce"], [1, "", "sprig rosemary", "produce"], [0.25, "cup", "chicken stock", "pantry"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Soften the sliced garlic with the rosemary in oil.", "Add the drained beans and stock and simmer 5 minutes, crushing a few beans to thicken. Season."] },
+  { id: "s-black-beans", name: "Smoky black beans", type: "starch", time: 10, kcal: 210, protein: 12, carbs: 36, fat: 2, fiber: 12,
+    ingredients: [[1, "", "can black beans (15 oz)", "pantry"], [2, "", "garlic clove", "produce"], [0.5, "tsp", "ground cumin", "pantry"], [0.5, "tsp", "smoked paprika", "pantry"], [1, "", "lime", "produce"]],
+    steps: ["Soften the garlic in a little oil with the cumin and paprika.", "Add the beans with half their liquid, simmer 6 minutes, and finish with lime juice."] },
+  { id: "s-corn-puree", name: "Sweet corn purée", type: "starch", time: 15, kcal: 220, protein: 5, carbs: 30, fat: 10, fiber: 4,
+    ingredients: [[2, "cup", "frozen sweet corn", "pantry"], [1, "", "shallot", "produce"], [0.25, "cup", "heavy cream", "dairy"], [1, "tbsp", "butter", "dairy", true]],
+    steps: ["Soften the sliced shallot in the butter, add the corn and cream, and simmer 5 minutes.", "Blend until silky and season."] },
+
+  /* ---------- vegetables and salads ---------- */
+  { id: "s-spinach", name: "Wilted garlic spinach", type: "veg", time: 5, kcal: 70, protein: 4, carbs: 6, fat: 4, fiber: 3,
+    ingredients: [[10, "oz", "baby spinach", "produce"], [2, "", "garlic clove", "produce"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Warm the sliced garlic in oil until fragrant.", "Add the spinach in handfuls with a pinch of salt and toss until just wilted."] },
+  { id: "s-bokchoy", name: "Sesame bok choy", type: "veg", time: 10, kcal: 90, protein: 3, carbs: 6, fat: 7, fiber: 2,
+    ingredients: [[4, "", "baby bok choy", "produce"], [2, "", "garlic clove", "produce"], [1, "", "thumb of ginger", "produce"], [1, "tbsp", "toasted sesame oil", "pantry"], [1, "tbsp", "soy sauce", "pantry", true]],
+    steps: ["Halve the bok choy and sear cut-side down in a hot pan with a little oil.", "Add the sliced garlic and ginger, a splash of water and the soy, cover for 2 minutes, and finish with sesame oil."] },
+  { id: "s-broccolini", name: "Charred broccolini, lemon & chili", type: "veg", time: 15, kcal: 90, protein: 4, carbs: 8, fat: 5, fiber: 4,
+    ingredients: [[1, "", "bunch broccolini", "produce"], [1, "", "lemon", "produce"], [0.25, "tsp", "chili flakes", "pantry", true], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Toss the broccolini with oil and salt and roast at 425°F for 10–12 minutes until charred at the tips.", "Finish with lemon juice and chili flakes."] },
+  { id: "s-sprouts", name: "Roasted Brussels sprouts", type: "veg", time: 25, kcal: 140, protein: 6, carbs: 16, fat: 6, fiber: 7,
+    ingredients: [[0.75, "lb", "Brussels sprouts", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Halve the sprouts and toss with oil and salt.", "Roast cut-side down at 425°F for 20–25 minutes until deeply browned."] },
+  { id: "s-green-beans", name: "Green beans, shallot & almonds", type: "veg", time: 10, kcal: 130, protein: 4, carbs: 11, fat: 8, fiber: 4,
+    ingredients: [[8, "oz", "green beans", "produce"], [1, "", "shallot", "produce"], [2, "tbsp", "sliced almonds", "pantry"], [1, "tbsp", "butter", "dairy", true]],
+    steps: ["Boil the beans in salted water for 3 minutes and drain.", "Toast the almonds in the butter with the sliced shallot, then toss the beans through."] },
+  { id: "s-asparagus", name: "Roasted asparagus with lemon", type: "veg", time: 12, kcal: 85, protein: 4, carbs: 7, fat: 5, fiber: 3,
+    ingredients: [[1, "", "bunch asparagus", "produce"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Snap off the woody ends, toss with oil and salt, and roast at 425°F for 8–10 minutes.", "Finish with lemon zest and juice."] },
+  { id: "s-arugula", name: "Arugula, shaved parmesan & lemon", type: "veg", time: 5, kcal: 110, protein: 5, carbs: 3, fat: 9, fiber: 1,
+    ingredients: [[3, "oz", "arugula", "produce"], [1, "oz", "parmesan", "dairy"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Dress the arugula with lemon juice, oil and salt just before serving.", "Shave the parmesan over the top."] },
+  { id: "s-carrots", name: "Honey-roasted carrots with thyme", type: "veg", time: 30, kcal: 140, protein: 2, carbs: 22, fat: 5, fiber: 5,
+    ingredients: [[1, "", "bunch small carrots", "produce"], [1, "", "small bunch thyme", "produce"], [1, "tbsp", "butter", "dairy", true], [1, "tsp", "honey", "pantry", true]],
+    steps: ["Halve the carrots lengthwise and toss with melted butter, honey, thyme and salt.", "Roast at 425°F for 25 minutes, turning once, until caramelised."] },
+  { id: "s-cucumber", name: "Smashed cucumber salad", type: "veg", time: 10, kcal: 60, protein: 2, carbs: 6, fat: 3, fiber: 1,
+    ingredients: [[1, "", "cucumber", "produce"], [1, "", "garlic clove", "produce"], [1, "tbsp", "rice vinegar", "pantry"], [1, "tsp", "toasted sesame oil", "pantry"], [1, "tsp", "sesame seeds", "pantry"], [1, "tbsp", "soy sauce", "pantry", true], [0.25, "tsp", "chili flakes", "pantry", true]],
+    steps: ["Bash the cucumber with a rolling pin until it splits, then tear into chunks. Salt for 5 minutes and drain.", "Toss with the grated garlic, vinegar, soy, sesame oil, chili and seeds."] },
+  { id: "s-slaw", name: "Lime cabbage slaw", type: "veg", time: 10, kcal: 80, protein: 2, carbs: 10, fat: 4, fiber: 3,
+    ingredients: [[0.5, "", "small red cabbage", "produce"], [1, "", "lime", "produce"], [1, "", "small bunch cilantro", "produce"], [1, "tbsp", "olive oil", "pantry", true], [1, "tsp", "honey", "pantry", true]],
+    steps: ["Shred the cabbage as finely as you can.", "Toss with lime juice, oil, honey, salt and chopped cilantro. Let it sit 5 minutes."] },
+  { id: "s-greek-salad", name: "Tomato, cucumber & feta salad", type: "veg", time: 10, kcal: 190, protein: 6, carbs: 10, fat: 14, fiber: 3,
+    ingredients: [[1, "cup", "cherry tomatoes", "produce"], [1, "", "cucumber", "produce"], [2, "oz", "feta", "dairy"], [0.25, "cup", "kalamata olives", "pantry"], [0.5, "tsp", "dried oregano", "pantry"], [1, "tbsp", "olive oil", "pantry", true], [1, "tsp", "red wine vinegar", "pantry", true]],
+    steps: ["Halve the tomatoes and chop the cucumber.", "Toss with the olives, oil, vinegar and oregano, and crumble the feta over."] },
+  { id: "s-corn", name: "Charred corn, lime & cotija", type: "veg", time: 10, kcal: 220, protein: 7, carbs: 30, fat: 9, fiber: 4,
+    ingredients: [[2, "cup", "frozen sweet corn", "pantry"], [1.5, "oz", "cotija cheese", "dairy"], [1, "", "lime", "produce"], [0.5, "tsp", "chili powder", "pantry"], [1, "", "small bunch cilantro", "produce"], [1, "tbsp", "mayonnaise", "pantry", true]],
+    steps: ["Char the corn in a dry, very hot pan for 5–6 minutes.", "Stir in the mayonnaise, lime juice and chili powder, then top with crumbled cotija and cilantro."] }
+];
+
 window.COOKBOOK = [
-  {
-    id: "duck-cherry", name: "Seared Duck Breast, Cherry–Port Sauce", side: "parsnip purée, wilted greens",
+  /* ==================== French Bistro ==================== */
+  { id: "duck-cherry", genre: "french", name: "Seared Duck Breast, Cherry–Port Sauce",
     blurb: "Crisp-skinned duck, rosy in the middle, with a glossy sweet-sharp sauce.",
-    time: 45, level: "Medium", tags: ["poultry"], kcal: 690, protein: 42, carbs: 48, fat: 34, fiber: 8,
-    ingredients: [
-      [2, "", "duck breast (about 7 oz each)", "protein"], [1, "lb", "parsnips", "produce"], [1, "", "shallot", "produce"],
-      [5, "oz", "baby spinach", "produce"], [1, "cup", "frozen dark cherries", "pantry"], [0.5, "cup", "ruby port", "pantry"],
-      [0.5, "cup", "chicken stock", "pantry"], [0.25, "cup", "heavy cream", "dairy"], [2, "tbsp", "butter", "dairy", true],
-      [1, "tsp", "red wine vinegar", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Peel and chop the parsnips. Simmer in salted water until very tender, about 15 minutes. Drain, then blend with the cream and half the butter until smooth. Keep warm.",
-      "Score the duck skin in a crosshatch without cutting the meat, and season well. Lay skin-side down in a cold pan, then turn the heat to medium-low. Render 12–14 minutes, pouring off fat as it pools, until the skin is deep golden.",
-      "Flip and cook 3–4 minutes for medium-rare. Rest on a board for 8 minutes.",
-      "Pour off all but a spoonful of fat. Soften the minced shallot, add the port and reduce by half, then add the stock and cherries and simmer until syrupy. Off the heat, swirl in the remaining butter and the vinegar.",
-      "Wilt the spinach in a little duck fat with a pinch of salt. Slice the duck and serve over the purée with the greens and sauce."
-    ],
-    note: "Starting the duck in a cold pan is the whole trick: the fat renders slowly and the skin crisps instead of burning."
-  },
-  {
-    id: "miso-cod", name: "Miso-Glazed Black Cod", side: "sesame bok choy, jasmine rice",
-    blurb: "Buttery fish under a caramelised sweet-savoury glaze.",
-    time: 30, level: "Easy", tags: ["seafood"], kcal: 640, protein: 34, carbs: 62, fat: 28, fiber: 3,
-    ingredients: [
-      [2, "", "black cod (sablefish) fillet, about 6 oz", "protein"], [3, "tbsp", "white miso", "pantry"], [2, "tbsp", "mirin", "pantry"],
-      [1, "tbsp", "sake or dry white wine", "pantry"], [1, "tbsp", "sugar", "pantry", true], [0.75, "cup", "jasmine rice", "pantry"],
-      [4, "", "baby bok choy", "produce"], [2, "", "garlic clove", "produce"], [1, "", "thumb of ginger", "produce"],
-      [2, "", "scallion", "produce"], [1, "tbsp", "toasted sesame oil", "pantry"], [1, "tbsp", "soy sauce", "pantry", true],
-      [1, "tbsp", "sesame seeds", "pantry"]
-    ],
-    steps: [
-      "Whisk the miso, mirin, sake and sugar. Coat the fish and leave it while you prepare everything else, or overnight in the fridge if you plan ahead.",
-      "Rinse the rice and cook it according to the packet.",
-      "Heat the broiler with a rack about 6 inches below. Wipe excess marinade off the fish, set it skin-side down on a foil-lined tray, and broil 8–10 minutes until deeply caramelised and just flaking.",
-      "Halve the bok choy. Sear cut-side down in a hot pan with a little oil, add sliced garlic and ginger, a splash of water and the soy, then cover for 2 minutes. Finish with sesame oil.",
-      "Serve the fish over rice with the bok choy, sliced scallions and sesame seeds."
-    ],
-    note: "Salmon or Chilean sea bass work if you can't find black cod. Watch the broiler closely in the last two minutes."
-  },
-  {
-    id: "scallops-corn", name: "Brown-Butter Scallops, Sweet Corn Purée", side: "crisp prosciutto, chives",
-    blurb: "Restaurant plating, weeknight timing.",
-    time: 30, level: "Medium", tags: ["seafood"], kcal: 520, protein: 36, carbs: 38, fat: 24, fiber: 4,
-    ingredients: [
-      [0.75, "lb", "large dry sea scallops", "protein"], [2, "oz", "prosciutto", "protein"], [2.5, "cup", "frozen sweet corn", "pantry"],
-      [1, "", "shallot", "produce"], [0.25, "cup", "heavy cream", "dairy"], [3, "tbsp", "butter", "dairy", true],
-      [1, "", "lemon", "produce"], [1, "", "small bunch chives", "produce"], [1, "tbsp", "neutral oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Crisp the prosciutto in a dry pan or a 400°F oven for 6–8 minutes. Break into shards.",
-      "Soften the sliced shallot in a spoonful of butter, add 2 cups of the corn and the cream, and simmer 5 minutes. Blend until silky and season. Sauté the remaining corn until lightly charred.",
-      "Pat the scallops very dry and season. Sear in smoking-hot oil for 2 minutes without moving them, until a dark crust forms.",
-      "Flip, add the remaining butter, and baste for 1 minute as it browns and smells nutty. Squeeze in lemon.",
-      "Spoon the purée onto warm plates, top with scallops, charred corn, prosciutto, chives and the brown butter."
-    ],
-    note: "Buy 'dry' scallops. Wet-packed ones are soaked in brine and will steam instead of sear."
-  },
-  {
-    id: "steak-poivre", name: "Steak au Poivre", side: "cognac cream, crispy smashed potatoes",
+    time: 35, level: "Medium", tags: ["poultry"], kcal: 470, protein: 40, carbs: 16, fat: 24, fiber: 2, pairs: ["s-parsnip", "s-spinach"],
+    ingredients: [[2, "", "duck breast (about 7 oz each)", "protein"], [1, "", "shallot", "produce"], [1, "cup", "frozen dark cherries", "pantry"], [0.5, "cup", "ruby port", "pantry"], [0.5, "cup", "chicken stock", "pantry"], [1, "tbsp", "butter", "dairy", true], [1, "tsp", "red wine vinegar", "pantry", true], [0, "", "salt", "pantry", true], [0, "", "black pepper", "pantry", true]],
+    steps: ["Score the duck skin in a crosshatch without cutting the meat, and season well. Lay skin-side down in a cold pan, then turn the heat to medium-low. Render 12–14 minutes, pouring off fat as it pools, until deep golden.", "Flip and cook 3–4 minutes for medium-rare. Rest on a board for 8 minutes.", "Pour off all but a spoonful of fat. Soften the minced shallot, add the port and reduce by half, then the stock and cherries, and simmer until syrupy. Off the heat, swirl in the butter and vinegar.", "Slice the duck and spoon the sauce over."],
+    note: "Starting the duck in a cold pan is the whole trick: the fat renders slowly and the skin crisps instead of burning." },
+  { id: "steak-poivre", genre: "french", name: "Steak au Poivre, Cognac Cream",
     blurb: "The bistro classic: peppercorn crust and a pan sauce worth mopping up.",
-    time: 40, level: "Medium", tags: ["meat"], kcal: 780, protein: 48, carbs: 40, fat: 46, fiber: 4,
-    ingredients: [
-      [2, "", "New York strip or filet steak, about 7 oz", "protein"], [1, "lb", "baby gold potatoes", "produce"], [1, "", "shallot", "produce"],
-      [1.5, "tbsp", "whole black peppercorns", "pantry"], [0.25, "cup", "cognac or brandy", "pantry"], [0.5, "cup", "beef stock", "pantry"],
-      [0.33, "cup", "heavy cream", "dairy"], [1, "tsp", "Dijon mustard", "pantry"], [2, "tbsp", "butter", "dairy", true],
-      [2, "tbsp", "olive oil", "pantry", true], [3, "oz", "arugula", "produce"], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Boil the potatoes in salted water until tender, 15 minutes. Drain, smash each flat on an oiled tray, drizzle with oil and salt, and roast at 450°F for 20 minutes until crisp.",
-      "Coarsely crush the peppercorns and press them into both sides of the salted steaks.",
-      "Sear the steaks in a hot pan with oil, 3–4 minutes a side for medium-rare, adding the butter near the end to baste. Rest on a plate.",
-      "Soften the minced shallot in the same pan. Off the heat, add the cognac, then return and let it bubble away. Add the stock, reduce by half, then stir in the cream and mustard and simmer until it coats a spoon. Pour in the resting juices.",
-      "Serve the steaks with the sauce, potatoes and a handful of dressed arugula."
-    ],
-    note: "Take the pan off the flame before adding the cognac. It can flare."
-  },
-  {
-    id: "mushroom-risotto", name: "Wild Mushroom Risotto", side: "thyme, parmesan, lemon",
-    blurb: "Slow-stirred and deeply savoury, finished with butter and cheese.",
-    time: 40, level: "Medium", tags: ["veg"], kcal: 610, protein: 19, carbs: 78, fat: 22, fiber: 4,
-    ingredients: [
-      [10, "oz", "mixed mushrooms (cremini, shiitake, oyster)", "produce"], [0.5, "oz", "dried porcini", "pantry"], [1, "cup", "arborio rice", "pantry"],
-      [1, "", "shallot", "produce"], [2, "", "garlic clove", "produce"], [0.5, "cup", "dry white wine", "pantry"],
-      [4, "cup", "vegetable stock", "pantry"], [2, "oz", "parmesan", "dairy"], [2, "tbsp", "butter", "dairy", true],
-      [1, "", "small bunch thyme", "produce"], [1, "", "lemon", "produce"], [2, "tbsp", "olive oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Soak the porcini in 1 cup of hot water for 10 minutes. Chop them and add the strained soaking liquid to the stock. Keep the stock hot.",
-      "Sear the sliced fresh mushrooms in oil over high heat, in batches, until well browned. Season, add thyme, and set aside.",
-      "Soften the minced shallot and garlic in a little oil. Stir in the rice for 2 minutes until the edges turn translucent, then add the wine and let it absorb.",
-      "Add hot stock a ladle at a time, stirring often, for 18–20 minutes until the rice is creamy with a slight bite.",
-      "Off the heat, beat in the butter, most of the parmesan, the mushrooms and a squeeze of lemon. Rest 2 minutes, then serve with the remaining cheese."
-    ],
-    note: "The risotto should flow slowly when you tilt the plate. Loosen with a splash of stock if it sits."
-  },
-  {
-    id: "chicken-beans", name: "Lemon-Herb Chicken Thighs", side: "garlicky white beans, charred broccolini",
-    blurb: "Shatteringly crisp skin over beans that drink up the pan juices.",
-    time: 40, level: "Easy", tags: ["poultry"], kcal: 620, protein: 46, carbs: 38, fat: 30, fiber: 11,
-    ingredients: [
-      [4, "", "bone-in, skin-on chicken thigh", "protein"], [1, "", "can cannellini beans (15 oz)", "pantry"], [1, "", "bunch broccolini", "produce"],
-      [4, "", "garlic clove", "produce"], [1, "", "lemon", "produce"], [0.5, "cup", "chicken stock", "pantry"],
-      [1, "", "small bunch parsley", "produce"], [1, "", "sprig rosemary", "produce"], [0.25, "tsp", "chili flakes", "pantry", true],
-      [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Heat the oven to 425°F. Pat the chicken dry and season generously.",
-      "Sear skin-side down in an ovenproof pan over medium heat for 8–10 minutes until deep golden. Flip and move to a plate.",
-      "In the same pan, soften the sliced garlic with rosemary and chili. Add the drained beans, stock and strips of lemon zest. Nestle the chicken on top, skin up, and roast 15 minutes.",
-      "Toss the broccolini with oil and salt and roast on a tray alongside for 10–12 minutes until charred at the tips.",
-      "Finish the beans with lemon juice and chopped parsley and serve everything together."
-    ],
-    note: "Don't rush the sear. The skin releases from the pan on its own once it's crisp."
-  },
-  {
-    id: "lamb-harissa", name: "Harissa Lamb Chops", side: "herbed couscous, mint yogurt",
-    blurb: "Charred, spiced chops cooled by yogurt and a bright herb couscous.",
-    time: 30, level: "Easy", tags: ["meat"], kcal: 720, protein: 44, carbs: 46, fat: 38, fiber: 5,
-    ingredients: [
-      [6, "", "lamb rib or loin chop", "protein"], [2, "tbsp", "harissa paste", "pantry"], [0.75, "cup", "couscous", "pantry"],
-      [0.5, "cup", "Greek yogurt", "dairy"], [1, "", "small bunch mint", "produce"], [1, "", "small bunch parsley", "produce"],
-      [1, "", "lemon", "produce"], [0.25, "cup", "pistachios", "pantry"], [0.25, "cup", "dried apricots", "pantry"],
-      [1, "", "garlic clove", "produce"], [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Rub the chops with the harissa, a spoonful of oil and salt. Leave at room temperature while you prepare the rest.",
-      "Pour 1 cup of boiling salted water over the couscous, cover for 5 minutes, then fluff. Fold in chopped parsley, half the mint, chopped apricots and pistachios, lemon zest and juice, and oil.",
-      "Stir the grated garlic and remaining chopped mint into the yogurt with a pinch of salt.",
-      "Sear the chops in a very hot pan or on a grill, 2–3 minutes a side for medium-rare. Rest 5 minutes.",
-      "Serve the chops over the couscous with the yogurt."
-    ],
-    note: "Harissa varies a lot in heat. Taste yours first and adjust."
-  },
-  {
-    id: "pork-apple", name: "Pork Tenderloin, Apple–Mustard Pan Sauce", side: "roasted Brussels sprouts",
-    blurb: "Lean, quick-roasting pork with a cider sauce that tastes like autumn.",
-    time: 40, level: "Easy", tags: ["meat"], kcal: 560, protein: 46, carbs: 34, fat: 24, fiber: 8,
-    ingredients: [
-      [1, "", "pork tenderloin (about 1 lb)", "protein"], [0.75, "lb", "Brussels sprouts", "produce"], [1, "", "firm apple", "produce"],
-      [1, "", "shallot", "produce"], [0.75, "cup", "apple cider", "pantry"], [0.5, "cup", "chicken stock", "pantry"],
-      [1, "tbsp", "whole-grain mustard", "pantry"], [2, "tbsp", "butter", "dairy", true], [1, "", "small bunch thyme", "produce"],
-      [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Heat the oven to 425°F. Halve the sprouts, toss with oil and salt, and roast cut-side down for 20–25 minutes.",
-      "Season the pork and sear in an ovenproof pan until browned all over, about 6 minutes. Roast 12–15 minutes to 140°F inside, then rest 8 minutes.",
-      "In the same pan, cook the sliced apple and shallot in a spoonful of butter until golden. Add the cider and thyme and reduce by half, then the stock, and reduce until glossy.",
-      "Off the heat, whisk in the mustard and remaining butter.",
-      "Slice the pork and serve with the sprouts and sauce."
-    ],
-    note: "Pull the pork at 140°F. It climbs to a blushing 145°F as it rests."
-  },
-  {
-    id: "shrimp-orzo", name: "Saffron Shrimp Orzo", side: "fennel, tomato, lemon",
-    blurb: "One pan, cooked like a loose risotto, with a little saffron for luxury.",
-    time: 30, level: "Easy", tags: ["seafood"], kcal: 590, protein: 40, carbs: 70, fat: 14, fiber: 6,
-    ingredients: [
-      [0.75, "lb", "large shrimp, peeled", "protein"], [1, "cup", "orzo", "pantry"], [1, "", "fennel bulb", "produce"],
-      [1, "cup", "cherry tomatoes", "produce"], [3, "", "garlic clove", "produce"], [1, "", "pinch saffron", "pantry"],
-      [0.5, "cup", "dry white wine", "pantry"], [2.5, "cup", "chicken or fish stock", "pantry"], [1, "", "lemon", "produce"],
-      [1, "", "small bunch parsley", "produce"], [2, "tbsp", "olive oil", "pantry", true], [0.25, "tsp", "chili flakes", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Steep the saffron in the warm stock.",
-      "Soften the thinly sliced fennel in oil for 6 minutes, then add the garlic and chili. Stir in the orzo and toast for a minute.",
-      "Add the wine, let it bubble away, then the saffron stock and halved tomatoes. Simmer, stirring now and then, for 9–10 minutes until the orzo is nearly tender and saucy.",
-      "Nestle in the seasoned shrimp, cover, and cook 3–4 minutes until just pink.",
-      "Finish with lemon juice, zest, parsley and the reserved fennel fronds."
-    ],
-    note: "Keep the fennel fronds. They make a better garnish than anything you could buy."
-  },
-  {
-    id: "squash-pasta", name: "Pappardelle, Roasted Squash & Sage Brown Butter", side: "burrata, toasted hazelnuts",
-    blurb: "Sweet squash, nutty butter and cool, creamy burrata.",
-    time: 35, level: "Easy", tags: ["veg"], kcal: 740, protein: 24, carbs: 86, fat: 34, fiber: 7,
-    ingredients: [
-      [8, "oz", "pappardelle", "pantry"], [1, "lb", "butternut squash", "produce"], [1, "", "ball burrata (4 oz)", "dairy"],
-      [3, "tbsp", "butter", "dairy", true], [1, "", "small bunch sage", "produce"], [0.25, "cup", "hazelnuts", "pantry"],
-      [1, "oz", "parmesan", "dairy"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Heat the oven to 425°F. Roast the cubed squash with oil and salt for 25 minutes until caramelised. Toast the hazelnuts for the last 5 minutes, then chop.",
-      "Cook the pasta in well-salted water. Keep a cup of the cooking water.",
-      "Melt the butter over medium heat with the sage leaves until the butter turns hazelnut-brown and the sage is crisp.",
-      "Toss the pasta into the butter with the squash, parmesan and enough pasta water to make it glossy. Sharpen with lemon juice.",
-      "Plate, tear the burrata over the top, and scatter with hazelnuts and the crisp sage."
-    ],
-    note: "Take the burrata out of the fridge when you start cooking. It should be cool, not cold."
-  },
-  {
-    id: "salmon-beurre-blanc", name: "Crispy-Skin Salmon, Lemon Beurre Blanc", side: "new potatoes, green beans",
+    time: 25, level: "Medium", tags: ["meat"], kcal: 560, protein: 46, carbs: 5, fat: 38, fiber: 1, pairs: ["s-smashed", "s-arugula"],
+    ingredients: [[2, "", "New York strip or filet steak, about 7 oz", "protein"], [1, "", "shallot", "produce"], [1.5, "tbsp", "whole black peppercorns", "pantry"], [0.25, "cup", "cognac or brandy", "pantry"], [0.5, "cup", "beef stock", "pantry"], [0.33, "cup", "heavy cream", "dairy"], [1, "tsp", "Dijon mustard", "pantry"], [1, "tbsp", "butter", "dairy", true], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Coarsely crush the peppercorns and press them into both sides of the salted steaks.", "Sear in a hot pan with oil, 3–4 minutes a side for medium-rare, adding the butter near the end to baste. Rest on a plate.", "Soften the minced shallot in the same pan. Off the heat, add the cognac, then return and let it bubble away. Add the stock, reduce by half, then stir in the cream and mustard and simmer until it coats a spoon.", "Pour the resting juices into the sauce and serve over the steaks."],
+    note: "Take the pan off the flame before adding the cognac. It can flare." },
+  { id: "salmon-beurre-blanc", genre: "french", name: "Crispy-Skin Salmon, Lemon Beurre Blanc",
     blurb: "A classic French butter sauce that makes a Tuesday feel like an occasion.",
-    time: 30, level: "Medium", tags: ["seafood"], kcal: 690, protein: 40, carbs: 32, fat: 44, fiber: 6,
-    ingredients: [
-      [2, "", "skin-on salmon fillet, about 6 oz", "protein"], [0.75, "lb", "new potatoes", "produce"], [6, "oz", "green beans", "produce"],
-      [1, "", "shallot", "produce"], [0.33, "cup", "dry white wine", "pantry"], [1, "tbsp", "white wine vinegar", "pantry", true],
-      [5, "tbsp", "butter", "dairy"], [1, "", "lemon", "produce"], [1, "", "small bunch dill", "produce"],
-      [1, "tbsp", "neutral oil", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Boil the potatoes in salted water for 15 minutes, adding the beans for the last 3. Drain and toss with a little butter and chopped dill.",
-      "Simmer the minced shallot with the wine and vinegar until only a couple of spoonfuls remain.",
-      "Over the lowest heat, whisk in the cold butter a cube at a time until the sauce is pale and creamy. Season with salt and lemon. Keep just warm.",
-      "Pat the salmon skin very dry and season. Cook skin-side down in a hot oiled pan, pressing for the first 30 seconds, for 5–6 minutes. Flip for 1 minute.",
-      "Serve the salmon skin-up over the vegetables with the sauce spooned around."
-    ],
-    note: "If the sauce gets too hot it splits. Lift the pan off the heat whenever it starts to look oily."
-  },
-  {
-    id: "chicken-marsala", name: "Chicken Marsala", side: "mushrooms, creamy polenta",
-    blurb: "Tender cutlets in a sweet-savoury wine sauce over soft polenta.",
-    time: 40, level: "Easy", tags: ["poultry"], kcal: 680, protein: 50, carbs: 48, fat: 26, fiber: 4,
-    ingredients: [
-      [2, "", "chicken breast", "protein"], [8, "oz", "cremini mushrooms", "produce"], [0.66, "cup", "dry Marsala", "pantry"],
-      [0.66, "cup", "chicken stock", "pantry"], [0.75, "cup", "polenta (cornmeal)", "pantry"], [1.5, "oz", "parmesan", "dairy"],
-      [1, "", "shallot", "produce"], [2, "", "garlic clove", "produce"], [0.25, "cup", "flour", "pantry", true],
-      [3, "tbsp", "butter", "dairy", true], [1, "", "small bunch parsley", "produce"], [2, "tbsp", "olive oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Whisk the polenta into 3 cups of simmering salted water. Cook on low, stirring often, for 20–25 minutes. Finish with the parmesan and a spoonful of butter.",
-      "Halve each chicken breast horizontally and pound to an even thickness. Season and dust with flour.",
-      "Brown the chicken in oil and butter, 3 minutes a side. Set aside.",
-      "Brown the sliced mushrooms in the same pan, then add the shallot and garlic. Pour in the Marsala and reduce by half, add the stock, and simmer until lightly thickened.",
-      "Return the chicken for 2 minutes, swirl in the last of the butter, and serve over polenta with parsley."
-    ],
-    note: "Use dry Marsala, not sweet. The sauce reduces enough to be sweet on its own."
-  },
-  {
-    id: "cauliflower-romesco", name: "Roasted Cauliflower Steaks, Romesco", side: "crispy chickpeas, herbs",
-    blurb: "Charred, meaty cauliflower over a smoky red pepper and almond sauce.",
-    time: 40, level: "Easy", tags: ["veg"], kcal: 540, protein: 18, carbs: 48, fat: 32, fiber: 14,
-    ingredients: [
-      [1, "", "large cauliflower", "produce"], [1, "", "can chickpeas (15 oz)", "pantry"], [1, "", "jar roasted red peppers (12 oz)", "pantry"],
-      [0.33, "cup", "roasted almonds", "pantry"], [1, "", "garlic clove", "produce"], [1, "tbsp", "sherry vinegar", "pantry"],
-      [1.5, "tsp", "smoked paprika", "pantry"], [1, "", "small bunch parsley", "produce"], [1, "", "lemon", "produce"],
-      [4, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Heat the oven to 450°F. Cut two thick steaks from the centre of the cauliflower and break the rest into florets. Rub everything with oil, salt and half the paprika.",
-      "Roast on a hot tray for 15 minutes, flip the steaks, and add the drained, dried chickpeas tossed in oil. Roast 12–15 minutes more until charred and crisp.",
-      "Blend the drained peppers, almonds, garlic, vinegar, remaining paprika and 2 spoonfuls of oil to a coarse sauce. Season.",
-      "Dress the parsley leaves with lemon juice and a little oil.",
-      "Spread the romesco on plates, top with the steaks, florets and chickpeas, and finish with the herbs."
-    ],
-    note: "Leftover romesco keeps a week and is excellent on eggs, fish or toast."
-  },
-  {
-    id: "mussels-wine", name: "Mussels in White Wine & Cream", side: "shallot, garlic, grilled bread",
+    time: 25, level: "Medium", tags: ["seafood"], kcal: 520, protein: 36, carbs: 3, fat: 40, fiber: 0, pairs: ["s-dill-potatoes", "s-green-beans"],
+    ingredients: [[2, "", "skin-on salmon fillet, about 6 oz", "protein"], [1, "", "shallot", "produce"], [0.33, "cup", "dry white wine", "pantry"], [5, "tbsp", "butter", "dairy"], [1, "", "lemon", "produce"], [1, "tbsp", "white wine vinegar", "pantry", true], [1, "tbsp", "neutral oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Simmer the minced shallot with the wine and vinegar until only a couple of spoonfuls remain.", "Over the lowest heat, whisk in the cold butter a cube at a time until the sauce is pale and creamy. Season with salt and lemon and keep just warm.", "Pat the salmon skin very dry and season. Cook skin-side down in a hot oiled pan, pressing for the first 30 seconds, for 5–6 minutes. Flip for 1 minute.", "Serve skin-side up with the sauce spooned around."],
+    note: "If the sauce gets too hot it splits. Lift the pan off the heat whenever it starts to look oily." },
+  { id: "mussels-wine", genre: "french", name: "Mussels in White Wine & Cream",
     blurb: "Fifteen minutes at the stove and a broth made for dunking.",
-    time: 25, level: "Easy", tags: ["seafood"], kcal: 610, protein: 38, carbs: 46, fat: 24, fiber: 3,
-    ingredients: [
-      [2, "lb", "mussels", "protein"], [2, "", "shallot", "produce"], [3, "", "garlic clove", "produce"],
-      [0.75, "cup", "dry white wine", "pantry"], [0.33, "cup", "heavy cream", "dairy"], [2, "tbsp", "butter", "dairy", true],
-      [1, "", "small bunch parsley", "produce"], [0.5, "", "baguette or country loaf", "bakery"], [1, "", "lemon", "produce"],
-      [1, "tbsp", "olive oil", "pantry", true], [0, "", "black pepper", "pantry", true]
-    ],
-    steps: [
-      "Rinse the mussels, pull off any beards, and discard any that stay open when tapped.",
-      "Soften the sliced shallots and garlic in butter in a wide pot. Add the wine and bring to a hard boil.",
-      "Add the mussels, cover, and steam 4–5 minutes, shaking the pot once, until they open. Discard any that stay shut.",
-      "Stir in the cream and parsley and grind in pepper.",
-      "Brush thick slices of bread with oil, grill or toast until charred, and serve alongside with lemon."
-    ],
-    note: "Mussels are salty on their own. Taste the broth before adding any salt."
-  },
-  {
-    id: "short-ribs", name: "Red Wine–Braised Short Ribs", side: "celery root mash",
-    blurb: "A slow Sunday braise that falls off the bone.",
-    time: 195, level: "Involved", tags: ["meat", "weekend"], kcal: 860, protein: 52, carbs: 34, fat: 54, fiber: 6,
-    ingredients: [
-      [2, "lb", "bone-in beef short ribs", "protein"], [1.5, "cup", "dry red wine", "pantry"], [2, "cup", "beef stock", "pantry"],
-      [1, "", "onion", "produce"], [2, "", "carrot", "produce"], [2, "", "celery stalk", "produce"],
-      [4, "", "garlic clove", "produce"], [1, "tbsp", "tomato paste", "pantry"], [1, "", "small bunch thyme", "produce"],
-      [2, "", "bay leaf", "pantry", true], [1, "", "celery root (about 1 lb)", "produce"], [0.5, "lb", "gold potatoes", "produce"],
-      [0.25, "cup", "heavy cream", "dairy"], [2, "tbsp", "butter", "dairy", true], [1, "tbsp", "neutral oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Heat the oven to 325°F. Season the ribs heavily and brown on all sides in a Dutch oven, about 10 minutes. Set aside.",
-      "Soften the chopped onion, carrot and celery in the fat, then stir in the garlic and tomato paste until it darkens. Add the wine and reduce by half.",
-      "Return the ribs with the stock, thyme and bay. Cover and braise in the oven for 2½–3 hours until a fork slides in easily.",
-      "Simmer the peeled, cubed celery root and potatoes until tender, then mash with the cream and butter.",
-      "Lift out the ribs, skim the fat, and reduce the strained liquid to a glossy sauce. Serve over the mash."
-    ],
-    note: "Better made a day ahead: chill overnight, lift off the set fat, and reheat gently."
-  },
-  {
-    id: "tuna-soba", name: "Sesame-Crusted Tuna", side: "chilled soba, cucumber, ginger-soy dressing",
-    blurb: "Seared outside, ruby inside, over cool noodles.",
-    time: 25, level: "Easy", tags: ["seafood"], kcal: 560, protein: 46, carbs: 56, fat: 16, fiber: 5,
-    ingredients: [
-      [2, "", "sushi-grade tuna steak, about 6 oz", "protein"], [6, "oz", "soba noodles", "pantry"], [3, "tbsp", "sesame seeds", "pantry"],
-      [1, "", "cucumber", "produce"], [3, "", "scallion", "produce"], [1, "cup", "shelled edamame", "pantry"],
-      [1, "", "thumb of ginger", "produce"], [3, "tbsp", "soy sauce", "pantry", true], [1, "tbsp", "rice vinegar", "pantry"],
-      [1, "tbsp", "toasted sesame oil", "pantry"], [1, "tsp", "honey", "pantry", true], [1, "", "lime", "produce"],
-      [1, "tbsp", "neutral oil", "pantry", true]
-    ],
-    steps: [
-      "Cook the soba according to the packet, adding the edamame for the last minute. Rinse under cold water until chilled and drain well.",
-      "Whisk the soy, vinegar, sesame oil, honey, grated ginger and lime juice.",
-      "Toss the noodles with half the dressing, the sliced cucumber and scallions.",
-      "Press the tuna into the sesame seeds. Sear in a very hot oiled pan for 45–60 seconds a side, leaving the centre rare.",
-      "Slice the tuna and serve over the noodles with the remaining dressing."
-    ],
-    note: "The pan has to be properly hot. A long sear cooks the tuna through and you lose the contrast."
-  },
-  {
-    id: "halloumi-farro", name: "Seared Halloumi & Farro", side: "roasted peppers, pistachio–herb sauce",
+    time: 20, level: "Easy", tags: ["seafood"], kcal: 380, protein: 34, carbs: 14, fat: 18, fiber: 1, pairs: ["s-bread", "s-arugula"],
+    ingredients: [[2, "lb", "mussels", "protein"], [2, "", "shallot", "produce"], [3, "", "garlic clove", "produce"], [0.75, "cup", "dry white wine", "pantry"], [0.33, "cup", "heavy cream", "dairy"], [1, "", "small bunch parsley", "produce"], [1, "", "lemon", "produce"], [2, "tbsp", "butter", "dairy", true], [0, "", "black pepper", "pantry", true]],
+    steps: ["Rinse the mussels, pull off any beards, and discard any that stay open when tapped.", "Soften the sliced shallots and garlic in butter in a wide pot. Add the wine and bring to a hard boil.", "Add the mussels, cover, and steam 4–5 minutes, shaking the pot once, until they open. Discard any that stay shut.", "Stir in the cream and parsley, grind in pepper, and serve with lemon."],
+    note: "Mussels are salty on their own. Taste the broth before adding any salt." },
+  { id: "coq-au-vin", genre: "french", name: "Coq au Vin",
+    blurb: "Chicken braised in red wine with bacon, mushrooms and pearl onions.",
+    time: 75, level: "Medium", tags: ["poultry"], kcal: 610, protein: 48, carbs: 14, fat: 36, fiber: 3, pairs: ["s-celery-mash", "s-green-beans"],
+    ingredients: [[4, "", "bone-in, skin-on chicken thigh", "protein"], [3, "oz", "thick-cut bacon", "protein"], [6, "oz", "cremini mushrooms", "produce"], [1, "cup", "frozen pearl onions", "pantry"], [3, "", "garlic clove", "produce"], [1.5, "cup", "dry red wine", "pantry"], [1, "cup", "chicken stock", "pantry"], [1, "tbsp", "tomato paste", "pantry"], [1, "", "small bunch thyme", "produce"], [1, "tbsp", "flour", "pantry", true], [1, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true], [0, "", "black pepper", "pantry", true]],
+    steps: ["Crisp the chopped bacon in a heavy pot and lift it out. Brown the seasoned chicken in the fat, skin-side down first, and set aside.", "Brown the mushrooms and onions in the same pot. Stir in the garlic, tomato paste and flour for a minute.", "Add the wine and scrape up the bottom, then the stock and thyme. Return the chicken and bacon, cover, and simmer gently for 40 minutes.", "Lift out the chicken, boil the sauce until glossy, and whisk in the butter."],
+    note: "Use a wine you would drink. A Pinot Noir from Oregon is a natural fit." },
+  { id: "sole-meuniere", genre: "french", name: "Sole Meunière",
+    blurb: "Delicate fish in nutty brown butter with lemon and capers.",
+    time: 20, level: "Easy", tags: ["seafood"], kcal: 420, protein: 34, carbs: 10, fat: 27, fiber: 0, pairs: ["s-dill-potatoes", "s-asparagus"],
+    ingredients: [[0.75, "lb", "petrale or Dover sole fillets", "protein"], [4, "tbsp", "butter", "dairy"], [1, "", "lemon", "produce"], [1, "tbsp", "capers", "pantry"], [1, "", "small bunch parsley", "produce"], [0.25, "cup", "flour", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Pat the fish dry, season, and dust lightly with flour.", "Cook in half the butter over medium-high heat, about 2 minutes a side, until golden. Move to warm plates.", "Wipe the pan, add the remaining butter and cook until it smells nutty and turns hazelnut-brown. Add the capers, lemon juice and parsley and pour over the fish."],
+    note: "Petrale sole is the Pacific Northwest choice and is in season through winter." },
+
+  /* ==================== Italian ==================== */
+  { id: "mushroom-risotto", genre: "italian", name: "Wild Mushroom Risotto", complete: true,
+    blurb: "Slow-stirred and deeply savoury, finished with butter and cheese.",
+    time: 40, level: "Medium", tags: ["veg"], kcal: 610, protein: 19, carbs: 78, fat: 22, fiber: 4, pairs: ["s-arugula"],
+    ingredients: [[10, "oz", "mixed mushrooms (cremini, shiitake, oyster)", "produce"], [0.5, "oz", "dried porcini", "pantry"], [1, "cup", "arborio rice", "pantry"], [1, "", "shallot", "produce"], [2, "", "garlic clove", "produce"], [0.5, "cup", "dry white wine", "pantry"], [4, "cup", "vegetable stock", "pantry"], [2, "oz", "parmesan", "dairy"], [1, "", "small bunch thyme", "produce"], [1, "", "lemon", "produce"], [2, "tbsp", "butter", "dairy", true], [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Soak the porcini in 1 cup of hot water for 10 minutes. Chop them and add the strained liquid to the stock. Keep the stock hot.", "Sear the sliced fresh mushrooms in oil over high heat, in batches, until well browned. Season, add thyme, and set aside.", "Soften the shallot and garlic, stir in the rice for 2 minutes, then add the wine. Add hot stock a ladle at a time, stirring often, for 18–20 minutes.", "Off the heat, beat in the butter, most of the parmesan, the mushrooms and a squeeze of lemon. Rest 2 minutes and serve."],
+    note: "The risotto should flow slowly when you tilt the plate. Loosen with a splash of stock if it sits." },
+  { id: "chicken-marsala", genre: "italian", name: "Chicken Marsala",
+    blurb: "Tender cutlets and mushrooms in a sweet-savoury wine sauce.",
+    time: 30, level: "Easy", tags: ["poultry"], kcal: 440, protein: 46, carbs: 16, fat: 18, fiber: 1, pairs: ["s-polenta", "s-broccolini"],
+    ingredients: [[2, "", "chicken breast", "protein"], [8, "oz", "cremini mushrooms", "produce"], [0.66, "cup", "dry Marsala", "pantry"], [0.66, "cup", "chicken stock", "pantry"], [1, "", "shallot", "produce"], [2, "", "garlic clove", "produce"], [1, "", "small bunch parsley", "produce"], [0.25, "cup", "flour", "pantry", true], [2, "tbsp", "butter", "dairy", true], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Halve each chicken breast horizontally and pound to an even thickness. Season and dust with flour.", "Brown in oil and half the butter, 3 minutes a side. Set aside.", "Brown the sliced mushrooms in the same pan, then add the shallot and garlic. Pour in the Marsala and reduce by half, add the stock, and simmer until lightly thickened.", "Return the chicken for 2 minutes, swirl in the remaining butter, and finish with parsley."],
+    note: "Use dry Marsala, not sweet. The sauce reduces enough to be sweet on its own." },
+  { id: "squash-pasta", genre: "italian", name: "Pappardelle, Roasted Squash, Sage Brown Butter & Burrata", complete: true,
+    blurb: "Sweet squash, nutty butter and cool, creamy burrata.",
+    time: 35, level: "Easy", tags: ["veg"], kcal: 740, protein: 24, carbs: 86, fat: 34, fiber: 7, pairs: ["s-arugula"],
+    ingredients: [[8, "oz", "pappardelle", "pantry"], [1, "lb", "butternut squash", "produce"], [1, "", "ball burrata (4 oz)", "dairy"], [3, "tbsp", "butter", "dairy"], [1, "", "small bunch sage", "produce"], [0.25, "cup", "hazelnuts", "pantry"], [1, "oz", "parmesan", "dairy"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Roast the cubed squash with oil and salt at 425°F for 25 minutes. Toast the hazelnuts for the last 5 minutes, then chop.", "Cook the pasta in well-salted water. Keep a cup of the cooking water.", "Melt the butter with the sage leaves until the butter turns hazelnut-brown and the sage is crisp.", "Toss the pasta into the butter with the squash, parmesan and enough pasta water to make it glossy. Sharpen with lemon, then top with torn burrata, hazelnuts and sage."],
+    note: "Take the burrata out of the fridge when you start cooking. It should be cool, not cold." },
+  { id: "shrimp-orzo", genre: "italian", name: "Saffron Shrimp Orzo with Fennel & Tomato", complete: true,
+    blurb: "One pan, cooked like a loose risotto, with a little saffron for luxury.",
+    time: 30, level: "Easy", tags: ["seafood"], kcal: 590, protein: 40, carbs: 70, fat: 14, fiber: 6, pairs: ["s-arugula"],
+    ingredients: [[0.75, "lb", "large shrimp, peeled", "protein"], [1, "cup", "orzo", "pantry"], [1, "", "fennel bulb", "produce"], [1, "cup", "cherry tomatoes", "produce"], [3, "", "garlic clove", "produce"], [1, "", "pinch saffron", "pantry"], [0.5, "cup", "dry white wine", "pantry"], [2.5, "cup", "chicken stock", "pantry"], [1, "", "lemon", "produce"], [1, "", "small bunch parsley", "produce"], [2, "tbsp", "olive oil", "pantry", true], [0.25, "tsp", "chili flakes", "pantry", true]],
+    steps: ["Steep the saffron in the warm stock. Soften the thinly sliced fennel in oil for 6 minutes, then add the garlic and chili.", "Stir in the orzo to toast for a minute. Add the wine, then the saffron stock and halved tomatoes. Simmer, stirring now and then, for 9–10 minutes.", "Nestle in the seasoned shrimp, cover, and cook 3–4 minutes until just pink.", "Finish with lemon juice, zest, parsley and the fennel fronds."],
+    note: "Keep the fennel fronds. They make a better garnish than anything you could buy." },
+  { id: "pork-saltimbocca", genre: "italian", name: "Pork Saltimbocca",
+    blurb: "Thin pork cutlets wrapped in prosciutto and sage, with a quick white wine sauce.",
+    time: 30, level: "Medium", tags: ["meat"], kcal: 460, protein: 52, carbs: 8, fat: 22, fiber: 0, pairs: ["s-polenta", "s-spinach"],
+    ingredients: [[1, "", "pork tenderloin (about 1 lb)", "protein"], [3, "oz", "prosciutto", "protein"], [1, "", "small bunch sage", "produce"], [0.5, "cup", "dry white wine", "pantry"], [0.5, "cup", "chicken stock", "pantry"], [1, "", "lemon", "produce"], [0.25, "cup", "flour", "pantry", true], [2, "tbsp", "butter", "dairy", true], [1, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Slice the tenderloin into 8 rounds and pound each thin. Press a sage leaf on top and wrap with a strip of prosciutto. Dust the underside with flour.", "Cook prosciutto-side down in oil and half the butter for 2 minutes until crisp, then flip for 1 minute. Set aside.", "Add the wine to the pan and reduce by half, then the stock, and simmer until slightly syrupy. Whisk in the remaining butter and a squeeze of lemon.", "Return the pork to coat and serve at once."],
+    note: "Don't salt the pork. The prosciutto does it for you." },
+  { id: "sausage-rigatoni", genre: "italian", name: "Rigatoni with Sausage & Fennel Ragù", complete: true,
+    blurb: "A fast, rich ragù with sweet fennel and a little heat.",
+    time: 35, level: "Easy", tags: ["meat"], kcal: 780, protein: 36, carbs: 92, fat: 28, fiber: 8, pairs: ["s-arugula"],
+    ingredients: [[8, "oz", "rigatoni", "pantry"], [10, "oz", "Italian sausage", "protein"], [1, "", "fennel bulb", "produce"], [3, "", "garlic clove", "produce"], [1, "", "can crushed tomatoes (14 oz)", "pantry"], [0.25, "cup", "dry red wine", "pantry"], [1.5, "oz", "parmesan", "dairy"], [1, "", "small bunch basil", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0.25, "tsp", "chili flakes", "pantry", true]],
+    steps: ["Squeeze the sausage from its casings and brown it in oil, breaking it up. Add the finely chopped fennel and cook until soft, then the garlic and chili.", "Add the wine, let it bubble away, then the tomatoes. Simmer 15 minutes.", "Cook the rigatoni until just shy of done, keeping a cup of the water.", "Toss the pasta through the ragù with a splash of pasta water and half the parmesan. Finish with basil and the rest of the cheese."],
+    note: "Chop the fennel small so it melts into the sauce." },
+  { id: "eggplant-parm", genre: "italian", name: "Eggplant Parmigiana",
+    blurb: "Roasted, not fried: silky eggplant, bright tomato and a crisp top.",
+    time: 50, level: "Easy", tags: ["veg"], kcal: 560, protein: 28, carbs: 38, fat: 33, fiber: 12, pairs: ["s-arugula", "s-bread"],
+    ingredients: [[1.5, "lb", "eggplant", "produce"], [1.5, "cup", "marinara sauce", "pantry"], [6, "oz", "fresh mozzarella", "dairy"], [1.5, "oz", "parmesan", "dairy"], [0.5, "cup", "panko breadcrumbs", "pantry"], [2, "", "garlic clove", "produce"], [1, "", "small bunch basil", "produce"], [3, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Slice the eggplant into half-inch rounds, brush with oil and salt, and roast at 425°F for 20 minutes, turning once.", "Layer the eggplant in a baking dish with the marinara, torn mozzarella, basil and half the parmesan.", "Mix the panko with the grated garlic, remaining parmesan and a spoonful of oil. Scatter over the top.", "Bake 20 minutes until bubbling and golden. Rest 5 minutes before serving."],
+    note: "Roasting keeps this far lighter than the fried version without losing the richness." },
+
+  /* ==================== Japanese & East Asian ==================== */
+  { id: "miso-cod", genre: "asian", name: "Miso-Glazed Black Cod",
+    blurb: "Buttery fish under a caramelised sweet-savoury glaze.",
+    time: 20, level: "Easy", tags: ["seafood"], kcal: 380, protein: 30, carbs: 14, fat: 22, fiber: 1, pairs: ["s-rice", "s-bokchoy"],
+    ingredients: [[2, "", "black cod (sablefish) fillet, about 6 oz", "protein"], [3, "tbsp", "white miso", "pantry"], [2, "tbsp", "mirin", "pantry"], [1, "tbsp", "sake", "pantry"], [2, "", "scallion", "produce"], [1, "tsp", "sesame seeds", "pantry"], [1, "tbsp", "sugar", "pantry", true]],
+    steps: ["Whisk the miso, mirin, sake and sugar. Coat the fish and leave it while you prepare the sides, or overnight in the fridge.", "Heat the broiler with a rack about 6 inches below. Wipe excess marinade off the fish and set it skin-side down on a foil-lined tray.", "Broil 8–10 minutes until deeply caramelised and just flaking. Top with sliced scallions and sesame seeds."],
+    note: "Salmon works if you can't find black cod. Watch the broiler closely in the last two minutes." },
+  { id: "tuna-sesame", genre: "asian", name: "Sesame-Crusted Tuna, Ginger-Soy Dressing",
+    blurb: "Seared outside, ruby inside.",
+    time: 15, level: "Easy", tags: ["seafood"], kcal: 330, protein: 42, carbs: 6, fat: 14, fiber: 1, pairs: ["s-soba", "s-cucumber"],
+    ingredients: [[2, "", "sushi-grade tuna steak, about 6 oz", "protein"], [3, "tbsp", "sesame seeds", "pantry"], [1, "", "thumb of ginger", "produce"], [1, "", "lime", "produce"], [1, "tbsp", "rice vinegar", "pantry"], [1, "tsp", "toasted sesame oil", "pantry"], [2, "tbsp", "soy sauce", "pantry", true], [1, "tsp", "honey", "pantry", true], [1, "tbsp", "neutral oil", "pantry", true]],
+    steps: ["Whisk the soy, vinegar, sesame oil, honey, grated ginger and lime juice.", "Press the tuna into the sesame seeds on all sides.", "Sear in a very hot oiled pan for 45–60 seconds a side, leaving the centre rare. Slice and spoon the dressing over."],
+    note: "The pan has to be properly hot. A long sear cooks the tuna through and you lose the contrast." },
+  { id: "gochujang-chicken", genre: "asian", name: "Gochujang-Glazed Chicken Thighs",
+    blurb: "Sticky, spicy-sweet Korean-style chicken with charred edges.",
+    time: 30, level: "Easy", tags: ["poultry"], kcal: 430, protein: 44, carbs: 16, fat: 20, fiber: 1, pairs: ["s-rice", "s-cucumber"],
+    ingredients: [[1.25, "lb", "boneless, skinless chicken thighs", "protein"], [2, "tbsp", "gochujang", "pantry"], [2, "", "garlic clove", "produce"], [1, "", "thumb of ginger", "produce"], [1, "tbsp", "rice vinegar", "pantry"], [1, "tsp", "toasted sesame oil", "pantry"], [2, "", "scallion", "produce"], [1, "tsp", "sesame seeds", "pantry"], [1, "tbsp", "soy sauce", "pantry", true], [1, "tbsp", "honey", "pantry", true]],
+    steps: ["Mix the gochujang, soy, honey, vinegar, sesame oil, grated garlic and ginger. Toss the chicken in half of it.", "Roast on a lined tray at 450°F for 18–20 minutes, or grill, until charred at the edges and cooked through.", "Brush with the remaining glaze, rest 5 minutes, then slice and top with scallions and sesame seeds."],
+    note: "Gochujang brands differ in heat. Start with a little less if you're unsure." },
+  { id: "green-curry-shrimp", genre: "asian", name: "Thai Green Curry with Shrimp",
+    blurb: "Fragrant coconut curry with crisp vegetables and basil.",
+    time: 25, level: "Easy", tags: ["seafood"], kcal: 480, protein: 36, carbs: 16, fat: 30, fiber: 4, pairs: ["s-rice"],
+    ingredients: [[0.75, "lb", "large shrimp, peeled", "protein"], [2, "tbsp", "green curry paste", "pantry"], [1, "", "can coconut milk (13.5 oz)", "pantry"], [1, "", "zucchini", "produce"], [1, "", "bell pepper", "produce"], [4, "oz", "snap peas", "produce"], [1, "tbsp", "fish sauce", "pantry"], [1, "", "lime", "produce"], [1, "", "small bunch basil", "produce"], [1, "tsp", "sugar", "pantry", true], [1, "tbsp", "neutral oil", "pantry", true]],
+    steps: ["Fry the curry paste in oil for a minute until fragrant, then stir in the coconut milk, fish sauce and sugar and simmer 5 minutes.", "Add the sliced zucchini and pepper and cook 4 minutes, then the snap peas and shrimp for 3 minutes until the shrimp are pink.", "Finish with lime juice and torn basil."],
+    note: "Curry pastes vary. Taste the sauce before the shrimp go in and add more paste if you want heat." },
+  { id: "mapo-tofu", genre: "asian", name: "Mapo Tofu with Shiitake",
+    blurb: "Silky tofu in a tingling, savoury Sichuan sauce. No meat needed.",
+    time: 25, level: "Easy", tags: ["veg"], kcal: 360, protein: 24, carbs: 18, fat: 22, fiber: 4, pairs: ["s-rice", "s-bokchoy"],
+    ingredients: [[14, "oz", "soft or medium tofu", "protein"], [6, "oz", "shiitake mushrooms", "produce"], [1.5, "tbsp", "doubanjiang (chili bean paste)", "pantry"], [3, "", "garlic clove", "produce"], [1, "", "thumb of ginger", "produce"], [3, "", "scallion", "produce"], [1, "tsp", "Sichuan peppercorns", "pantry"], [0.75, "cup", "vegetable stock", "pantry"], [2, "tsp", "cornstarch", "pantry"], [1, "tsp", "toasted sesame oil", "pantry"], [1, "tbsp", "soy sauce", "pantry", true], [2, "tbsp", "neutral oil", "pantry", true]],
+    steps: ["Toast and grind the Sichuan peppercorns. Cube the tofu and sit it in hot salted water for 5 minutes, then drain.", "Brown the finely chopped shiitake in oil until crisp at the edges. Add the garlic, ginger and chili bean paste and fry until the oil turns red.", "Add the stock and soy, slide in the tofu, and simmer 5 minutes. Stir in the cornstarch mixed with a little water until glossy.", "Finish with sesame oil, scallions and the ground peppercorns."],
+    note: "Stir gently with the back of a spoon so the tofu stays in cubes." },
+
+  /* ==================== Mediterranean & Middle East ==================== */
+  { id: "lamb-harissa", genre: "med", name: "Harissa Lamb Chops, Mint Yogurt",
+    blurb: "Charred, spiced chops cooled by garlicky yogurt.",
+    time: 20, level: "Easy", tags: ["meat"], kcal: 480, protein: 40, carbs: 6, fat: 33, fiber: 1, pairs: ["s-couscous", "s-greek-salad"],
+    ingredients: [[6, "", "lamb rib or loin chop", "protein"], [2, "tbsp", "harissa paste", "pantry"], [0.5, "cup", "Greek yogurt", "dairy"], [1, "", "small bunch mint", "produce"], [1, "", "garlic clove", "produce"], [1, "", "lemon", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Rub the chops with the harissa, oil and salt. Leave at room temperature for 15 minutes.", "Stir the grated garlic, chopped mint and a squeeze of lemon into the yogurt.", "Sear the chops in a very hot pan or on a grill, 2–3 minutes a side for medium-rare. Rest 5 minutes and serve with the yogurt."],
+    note: "Harissa varies a lot in heat. Taste yours first and adjust." },
+  { id: "cauliflower-romesco", genre: "med", name: "Roasted Cauliflower Steaks, Romesco & Crispy Chickpeas", complete: true,
+    blurb: "Charred, meaty cauliflower over a smoky red pepper and almond sauce.",
+    time: 40, level: "Easy", tags: ["veg"], kcal: 540, protein: 18, carbs: 48, fat: 32, fiber: 14, pairs: ["s-bread"],
+    ingredients: [[1, "", "large cauliflower", "produce"], [1, "", "can chickpeas (15 oz)", "pantry"], [1, "", "jar roasted red peppers (12 oz)", "pantry"], [0.33, "cup", "roasted almonds", "pantry"], [1, "", "garlic clove", "produce"], [1, "tbsp", "sherry vinegar", "pantry"], [1.5, "tsp", "smoked paprika", "pantry"], [1, "", "small bunch parsley", "produce"], [1, "", "lemon", "produce"], [4, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Cut two thick steaks from the centre of the cauliflower and break the rest into florets. Rub with oil, salt and half the paprika and roast at 450°F for 15 minutes.", "Flip the steaks, add the drained, dried chickpeas tossed in oil, and roast 12–15 minutes more.", "Blend the drained peppers, almonds, garlic, vinegar, remaining paprika and 2 spoonfuls of oil to a coarse sauce.", "Spread the romesco on plates and top with the cauliflower, chickpeas and lemon-dressed parsley."],
+    note: "Leftover romesco keeps a week and is excellent on eggs, fish or toast." },
+  { id: "halloumi-farro", genre: "med", name: "Seared Halloumi & Farro, Pistachio–Herb Sauce", complete: true,
     blurb: "Chewy grains, salty golden cheese, and a green sauce that ties it together.",
-    time: 35, level: "Easy", tags: ["veg"], kcal: 680, protein: 28, carbs: 62, fat: 36, fiber: 10,
-    ingredients: [
-      [8, "oz", "halloumi", "dairy"], [0.75, "cup", "farro", "pantry"], [2, "", "bell pepper", "produce"],
-      [1, "", "red onion", "produce"], [1, "", "small bunch parsley", "produce"], [1, "", "small bunch mint", "produce"],
-      [0.25, "cup", "pistachios", "pantry"], [1, "", "garlic clove", "produce"], [1, "", "lemon", "produce"],
-      [3, "oz", "arugula", "produce"], [1, "tsp", "honey", "pantry", true], [4, "tbsp", "olive oil", "pantry", true],
-      [0, "", "salt", "pantry", true]
-    ],
-    steps: [
-      "Simmer the farro in salted water for 25–30 minutes until tender with a little chew. Drain.",
-      "Roast the sliced peppers and onion with oil and salt at 425°F for 20 minutes until soft and charred at the edges.",
-      "Blend the parsley, mint, pistachios, garlic, lemon juice and 3 spoonfuls of oil into a loose sauce. Season.",
-      "Sear thick slices of halloumi in a dry non-stick pan, 2 minutes a side, until golden. Drizzle with the honey.",
-      "Toss the farro with the vegetables, arugula and half the sauce. Top with the halloumi and the remaining sauce."
-    ],
-    note: "Cook the halloumi last and serve it straight away. It turns squeaky as it cools."
-  }
+    time: 35, level: "Easy", tags: ["veg"], kcal: 680, protein: 28, carbs: 62, fat: 36, fiber: 10, pairs: [],
+    ingredients: [[8, "oz", "halloumi", "dairy"], [0.75, "cup", "farro", "pantry"], [2, "", "bell pepper", "produce"], [1, "", "red onion", "produce"], [1, "", "small bunch parsley", "produce"], [1, "", "small bunch mint", "produce"], [0.25, "cup", "pistachios", "pantry"], [1, "", "garlic clove", "produce"], [1, "", "lemon", "produce"], [3, "oz", "arugula", "produce"], [4, "tbsp", "olive oil", "pantry", true], [1, "tsp", "honey", "pantry", true]],
+    steps: ["Simmer the farro in salted water for 25–30 minutes. Roast the sliced peppers and onion with oil and salt at 425°F for 20 minutes.", "Blend the parsley, mint, pistachios, garlic, lemon juice and 3 spoonfuls of oil into a loose sauce.", "Sear thick slices of halloumi in a dry non-stick pan, 2 minutes a side, and drizzle with the honey.", "Toss the farro with the vegetables, arugula and half the sauce. Top with the halloumi and remaining sauce."],
+    note: "Cook the halloumi last and serve it straight away. It turns squeaky as it cools." },
+  { id: "shawarma-chicken", genre: "med", name: "Shawarma-Spiced Chicken, Tahini Sauce",
+    blurb: "Warm spices, charred onions and a lemony tahini drizzle.",
+    time: 35, level: "Easy", tags: ["poultry"], kcal: 520, protein: 46, carbs: 10, fat: 33, fiber: 3, pairs: ["s-couscous", "s-greek-salad"],
+    ingredients: [[1.25, "lb", "boneless, skinless chicken thighs", "protein"], [1.5, "tsp", "ground cumin", "pantry"], [1, "tsp", "smoked paprika", "pantry"], [1, "tsp", "ground coriander", "pantry"], [0.5, "tsp", "ground turmeric", "pantry"], [3, "", "garlic clove", "produce"], [1, "", "lemon", "produce"], [1, "", "red onion", "produce"], [3, "tbsp", "tahini", "pantry"], [1, "", "small bunch parsley", "produce"], [2, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Toss the chicken with the spices, grated garlic, oil, salt and half the lemon juice. Add the onion cut into wedges.", "Roast on a hot tray at 450°F for 20–22 minutes until charred at the edges.", "Whisk the tahini with the remaining lemon juice and enough cold water to make it pourable. Season.", "Slice the chicken and serve with the onions, tahini and parsley."],
+    note: "Thighs stay juicy at high heat. Breasts will dry out with this method." },
+  { id: "greek-cod", genre: "med", name: "Baked Cod with Tomatoes, Olives & Feta",
+    blurb: "A bright one-dish bake that makes its own sauce.",
+    time: 30, level: "Easy", tags: ["seafood"], kcal: 380, protein: 36, carbs: 12, fat: 20, fiber: 3, pairs: ["s-white-beans", "s-bread"],
+    ingredients: [[2, "", "cod fillet, about 6 oz", "protein"], [2, "cup", "cherry tomatoes", "produce"], [0.33, "cup", "kalamata olives", "pantry"], [1, "tbsp", "capers", "pantry"], [3, "", "garlic clove", "produce"], [0.25, "cup", "dry white wine", "pantry"], [1, "tsp", "dried oregano", "pantry"], [2, "oz", "feta", "dairy"], [1, "", "small bunch parsley", "produce"], [1, "", "lemon", "produce"], [2, "tbsp", "olive oil", "pantry", true]],
+    steps: ["Toss the tomatoes, olives, capers, sliced garlic, wine, oregano and oil in a baking dish. Roast at 425°F for 12 minutes until the tomatoes burst.", "Nestle in the seasoned cod, crumble the feta over, and bake 10–12 minutes until the fish flakes.", "Finish with lemon juice and parsley."],
+    note: "Any firm white fish works: halibut, rockfish or sea bass." },
+
+  /* ==================== Pacific Northwest & American ==================== */
+  { id: "chicken-lemon", genre: "american", name: "Lemon-Herb Chicken Thighs",
+    blurb: "Shatteringly crisp skin with a garlicky pan jus.",
+    time: 35, level: "Easy", tags: ["poultry"], kcal: 440, protein: 38, carbs: 4, fat: 30, fiber: 1, pairs: ["s-white-beans", "s-broccolini"],
+    ingredients: [[4, "", "bone-in, skin-on chicken thigh", "protein"], [4, "", "garlic clove", "produce"], [1, "", "lemon", "produce"], [1, "", "sprig rosemary", "produce"], [0.5, "cup", "chicken stock", "pantry"], [1, "", "small bunch parsley", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true], [0, "", "black pepper", "pantry", true]],
+    steps: ["Pat the chicken dry and season generously. Sear skin-side down in an ovenproof pan over medium heat for 8–10 minutes until deep golden.", "Flip, add the garlic, rosemary and strips of lemon zest, and roast at 425°F for 15 minutes.", "Move the chicken to plates. Add the stock and lemon juice to the pan, boil for 2 minutes, and stir in the parsley."],
+    note: "Don't rush the sear. The skin releases from the pan on its own once it's crisp." },
+  { id: "pork-apple", genre: "american", name: "Pork Tenderloin, Apple–Mustard Pan Sauce",
+    blurb: "Lean, quick-roasting pork with a cider sauce that tastes like autumn.",
+    time: 35, level: "Easy", tags: ["meat"], kcal: 400, protein: 44, carbs: 20, fat: 15, fiber: 2, pairs: ["s-smashed", "s-sprouts"],
+    ingredients: [[1, "", "pork tenderloin (about 1 lb)", "protein"], [1, "", "firm apple", "produce"], [1, "", "shallot", "produce"], [0.75, "cup", "apple cider", "pantry"], [0.5, "cup", "chicken stock", "pantry"], [1, "tbsp", "whole-grain mustard", "pantry"], [1, "", "small bunch thyme", "produce"], [2, "tbsp", "butter", "dairy", true], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Season the pork and sear in an ovenproof pan until browned all over, about 6 minutes. Roast at 425°F for 12–15 minutes to 140°F inside, then rest 8 minutes.", "In the same pan, cook the sliced apple and shallot in half the butter until golden. Add the cider and thyme and reduce by half, then the stock, and reduce until glossy.", "Off the heat, whisk in the mustard and remaining butter. Slice the pork and spoon the sauce over."],
+    note: "Pull the pork at 140°F. It climbs to a blushing 145°F as it rests." },
+  { id: "scallops-butter", genre: "american", name: "Brown-Butter Scallops, Crisp Prosciutto",
+    blurb: "Restaurant plating, weeknight timing.",
+    time: 15, level: "Medium", tags: ["seafood"], kcal: 340, protein: 34, carbs: 8, fat: 19, fiber: 0, pairs: ["s-corn-puree", "s-asparagus"],
+    ingredients: [[0.75, "lb", "large dry sea scallops", "protein"], [2, "oz", "prosciutto", "protein"], [3, "tbsp", "butter", "dairy"], [1, "", "lemon", "produce"], [1, "", "small bunch chives", "produce"], [1, "tbsp", "neutral oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Crisp the prosciutto in a dry pan for 3–4 minutes and break into shards.", "Pat the scallops very dry and season. Sear in smoking-hot oil for 2 minutes without moving them, until a dark crust forms.", "Flip, add the butter, and baste for 1 minute as it browns and smells nutty. Squeeze in lemon and serve with the prosciutto and chives."],
+    note: "Buy 'dry' scallops. Wet-packed ones are soaked in brine and will steam instead of sear." },
+  { id: "short-ribs", genre: "american", name: "Red Wine–Braised Short Ribs",
+    blurb: "A slow Sunday braise that falls off the bone.",
+    time: 195, level: "Involved", tags: ["meat", "weekend"], kcal: 680, protein: 50, carbs: 12, fat: 46, fiber: 2, pairs: ["s-celery-mash", "s-carrots"],
+    ingredients: [[2, "lb", "bone-in beef short ribs", "protein"], [1.5, "cup", "dry red wine", "pantry"], [2, "cup", "beef stock", "pantry"], [1, "", "onion", "produce"], [2, "", "carrot", "produce"], [2, "", "celery stalk", "produce"], [4, "", "garlic clove", "produce"], [1, "tbsp", "tomato paste", "pantry"], [1, "", "small bunch thyme", "produce"], [2, "", "bay leaf", "pantry", true], [1, "tbsp", "neutral oil", "pantry", true], [0, "", "salt", "pantry", true], [0, "", "black pepper", "pantry", true]],
+    steps: ["Season the ribs heavily and brown on all sides in a Dutch oven, about 10 minutes. Set aside.", "Soften the chopped onion, carrot and celery in the fat, then stir in the garlic and tomato paste until it darkens. Add the wine and reduce by half.", "Return the ribs with the stock, thyme and bay. Cover and braise at 325°F for 2½–3 hours until a fork slides in easily.", "Lift out the ribs, skim the fat, and reduce the strained liquid to a glossy sauce."],
+    note: "Better made a day ahead: chill overnight, lift off the set fat, and reheat gently." },
+  { id: "hazelnut-halibut", genre: "american", name: "Hazelnut-Crusted Halibut",
+    blurb: "Oregon hazelnuts make a crisp, toasty crust for mild, flaky fish.",
+    time: 25, level: "Easy", tags: ["seafood"], kcal: 430, protein: 40, carbs: 10, fat: 26, fiber: 2, pairs: ["s-dill-potatoes", "s-green-beans"],
+    ingredients: [[2, "", "halibut fillet, about 6 oz", "protein"], [0.33, "cup", "hazelnuts", "pantry"], [0.25, "cup", "panko breadcrumbs", "pantry"], [1, "tbsp", "Dijon mustard", "pantry"], [1, "", "small bunch parsley", "produce"], [1, "", "lemon", "produce"], [2, "tbsp", "butter", "dairy", true], [0, "", "salt", "pantry", true]],
+    steps: ["Pulse the hazelnuts until coarsely chopped and mix with the panko, chopped parsley, lemon zest and melted butter.", "Season the fish, brush the tops with mustard, and press on the crust.", "Bake at 425°F for 10–12 minutes until the crust is golden and the fish just flakes. Serve with lemon."],
+    note: "Halibut dries out fast. Take it out when the centre is barely opaque." },
+  { id: "smash-burgers", genre: "american", name: "Smash Burgers, Caramelised Onion & Gruyère",
+    blurb: "Lacy, crisp-edged patties on toasted brioche.",
+    time: 30, level: "Easy", tags: ["meat"], kcal: 820, protein: 46, carbs: 38, fat: 54, fiber: 2, pairs: ["s-smashed", "s-arugula"],
+    ingredients: [[0.75, "lb", "ground beef (80/20)", "protein"], [2, "", "brioche bun", "bakery"], [3, "oz", "gruyère", "dairy"], [1, "", "onion", "produce"], [0.25, "cup", "dill pickle chips", "pantry"], [1, "tbsp", "Dijon mustard", "pantry"], [1, "tbsp", "butter", "dairy", true], [1, "tbsp", "mayonnaise", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Cook the thinly sliced onion in butter with a pinch of salt over medium-low heat for 15–20 minutes until deep golden.", "Divide the beef into 4 loose balls. Smash each flat in a very hot dry pan, salt, and cook 90 seconds until crusted. Flip, top with gruyère, and cook 45 seconds more.", "Toast the buns in the pan. Spread with mustard and mayonnaise and stack two patties each with onions and pickles."],
+    note: "Press hard and only once, in the first 20 seconds. That contact is what builds the crust." },
+
+  /* ==================== Latin ==================== */
+  { id: "chimichurri-steak", genre: "latin", name: "Skirt Steak with Chimichurri",
+    blurb: "Fast, hot and charred, under a sharp green herb sauce.",
+    time: 25, level: "Easy", tags: ["meat"], kcal: 560, protein: 48, carbs: 3, fat: 39, fiber: 1, pairs: ["s-cilantro-rice", "s-corn"],
+    ingredients: [[1, "lb", "skirt or flank steak", "protein"], [1, "", "small bunch parsley", "produce"], [1, "", "small bunch cilantro", "produce"], [3, "", "garlic clove", "produce"], [1, "tsp", "dried oregano", "pantry"], [2, "tbsp", "red wine vinegar", "pantry", true], [4, "tbsp", "olive oil", "pantry", true], [0.25, "tsp", "chili flakes", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Finely chop the parsley, cilantro and garlic and stir with the oregano, vinegar, oil, chili and salt. Let it sit.", "Salt the steak well and sear in a very hot pan or on a grill, 2–3 minutes a side.", "Rest 8 minutes, slice thinly across the grain, and spoon the chimichurri over."],
+    note: "Slicing across the grain matters more than anything else for this cut." },
+  { id: "fish-tacos", genre: "latin", name: "Baja Fish Tacos, Chipotle Crema", complete: true,
+    blurb: "Spiced seared fish, crunchy cabbage and a smoky lime cream.",
+    time: 30, level: "Easy", tags: ["seafood"], kcal: 620, protein: 40, carbs: 56, fat: 26, fiber: 10, pairs: ["s-black-beans", "s-corn"],
+    ingredients: [[0.75, "lb", "cod or rockfish fillets", "protein"], [8, "", "corn tortilla", "bakery"], [0.5, "", "small red cabbage", "produce"], [2, "", "lime", "produce"], [1, "", "small bunch cilantro", "produce"], [1, "", "avocado", "produce"], [0.25, "cup", "sour cream", "dairy"], [1, "tbsp", "chipotle in adobo", "pantry"], [1, "tsp", "ground cumin", "pantry"], [1, "tsp", "chili powder", "pantry"], [1, "tbsp", "neutral oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Shred the cabbage and toss with the juice of one lime, salt and half the cilantro.", "Stir the minced chipotle and a squeeze of lime into the sour cream.", "Rub the fish with the cumin, chili powder and salt. Sear in oil 2–3 minutes a side and flake into large pieces.", "Warm the tortillas in a dry pan and fill with fish, cabbage, sliced avocado, crema and cilantro."],
+    note: "Char the tortillas directly over a gas flame for a few seconds if you can." },
+  { id: "chipotle-shrimp", genre: "latin", name: "Chipotle-Lime Butter Shrimp",
+    blurb: "Smoky, garlicky and done in ten minutes.",
+    time: 15, level: "Easy", tags: ["seafood"], kcal: 300, protein: 36, carbs: 6, fat: 14, fiber: 0, pairs: ["s-cilantro-rice", "s-slaw"],
+    ingredients: [[0.75, "lb", "large shrimp, peeled", "protein"], [1.5, "tbsp", "chipotle in adobo", "pantry"], [3, "", "garlic clove", "produce"], [1, "", "lime", "produce"], [1, "", "small bunch cilantro", "produce"], [2, "tbsp", "butter", "dairy", true], [1, "tsp", "honey", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Pat the shrimp dry and season. Sear in half the butter over high heat, 90 seconds a side, and set aside.", "Lower the heat, add the remaining butter with the garlic and minced chipotle for 30 seconds, then the honey and lime juice.", "Return the shrimp to coat and finish with cilantro."],
+    note: "Shrimp go from perfect to rubbery quickly. Pull them when they've just curled into a C." },
+  { id: "enchiladas", genre: "latin", name: "Sweet Potato & Black Bean Enchiladas", complete: true,
+    blurb: "Roasted sweet potato and beans under red chile sauce and melted cheese.",
+    time: 50, level: "Easy", tags: ["veg"], kcal: 720, protein: 28, carbs: 92, fat: 27, fiber: 20, pairs: ["s-slaw"],
+    ingredients: [[8, "", "corn tortilla", "bakery"], [0.75, "lb", "sweet potato", "produce"], [1, "", "can black beans (15 oz)", "pantry"], [1.5, "cup", "red enchilada sauce", "pantry"], [5, "oz", "Monterey Jack", "dairy"], [1, "", "red onion", "produce"], [1, "tsp", "ground cumin", "pantry"], [1, "", "small bunch cilantro", "produce"], [0.25, "cup", "sour cream", "dairy"], [1, "", "lime", "produce"], [1, "tbsp", "olive oil", "pantry", true], [0, "", "salt", "pantry", true]],
+    steps: ["Roast the diced sweet potato and half the onion with oil, cumin and salt at 425°F for 20 minutes. Mix with the drained beans and a third of the cheese.", "Warm the tortillas so they bend. Fill, roll, and set seam-side down in a baking dish spread with a little sauce.", "Pour over the remaining sauce, top with the rest of the cheese, and bake 15–18 minutes until bubbling.", "Finish with sour cream, cilantro, diced raw onion and lime."],
+    note: "Warming the tortillas first stops them cracking when you roll them." }
 ];

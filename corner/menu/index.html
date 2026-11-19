@@ -63,19 +63,38 @@ h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; margin
 .dish .kind { color: var(--leaf); display: flex; justify-content: space-between; gap: 12px; }
 .dish .kind span:last-child { color: var(--muted); }
 .dish h3 { font-family: var(--font-display); font-weight: 400; font-size: 23px; line-height: 1.15; margin: 4px 0 0; text-wrap: balance; }
-.dish .side { font-family: var(--font-display); font-style: italic; color: var(--sun); font-size: 16px; }
+.dish .side { font-family: var(--font-display); font-style: italic; color: var(--sun); font-size: 15.5px; line-height: 1.35; }
 .dish p { margin: 0; color: var(--muted); font-size: 14.5px; flex: 1; }
 .facts { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 13px; padding-top: 10px; border-top: 1px solid var(--line); }
 .facts b { color: var(--text); font-weight: 400; }
 .dish .row { display: flex; gap: 8px; margin-top: 4px; }
 .dish .row .btn { flex: 1; text-align: center; font-size: 14.5px; padding: 9px 12px; }
 
+.genre { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin: 36px 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.genre:first-child { margin-top: 12px; }
+.genre h2 { font-size: 28px; margin: 0; }
+.genre p { margin: 0; color: var(--muted); flex: 1 1 200px; font-size: 14.5px; }
+.genre .mono { color: var(--leaf); }
+.leaf { color: var(--leaf); }
+.sidegrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.sidepick { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; font-size: 14.5px; }
+.sidepick.on { border-color: var(--sun); background: rgba(244, 196, 83, .07); }
+.sidepick input { width: 17px; height: 17px; margin: 3px 0 0; accent-color: var(--sun); }
+.sidepick small, .sidercp small, td small { display: block; color: var(--muted); font-size: 12.5px; }
+.total { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); }
+.total b { color: var(--sun); font-weight: 400; }
+.sheetfoot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.sidercp { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; }
+.sidercp summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; font-family: var(--font-display); font-size: 18px; }
+.sidercp[open] summary { margin-bottom: 12px; }
+.sidercp .ing { margin-bottom: 12px; }
+.acts { display: flex; gap: 16px; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
 .sub { color: var(--muted); font-size: 14.5px; margin: 0 0 16px; }
 .state { padding: 44px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
 .state .btn { margin-top: 14px; }
 .picks { list-style: none; margin: 0; padding: 0; }
-.picks li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); }
+.picks li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); }
 .picks li:last-child { border-bottom: 0; }
 .picks .nm { font-family: var(--font-display); font-size: 19px; line-height: 1.2; }
 .picks .nm small { display: block; font-family: var(--font-body); color: var(--muted); font-size: 13px; margin-top: 3px; }
@@ -150,7 +169,7 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 
   <div class="eyebrow mono" id="weekOf"></div>
   <h1>Karly &amp; Andrew's <em>weekly menu</em></h1>
-  <p class="lede">Choose the dinners you feel like this week. The planner adds up the nutrition and writes one shopping list for everything.</p>
+  <p class="lede">Choose the dinners you feel like this week and the sides to go with them. The planner adds up the nutrition and writes one shopping list for everything.</p>
 
   <nav class="tabs" aria-label="Steps">
     <a class="btn mono" href="#menu" data-view="menu">1 · Menu</a>
@@ -160,11 +179,12 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 
   <!-- ============ 1. Menu ============ -->
   <section id="view-menu">
+    <div class="chips" id="genres" role="group" aria-label="Cuisine" style="margin-bottom: 10px"></div>
     <div class="bar">
       <div class="chips" id="filters" role="group" aria-label="Filter dishes"></div>
       <button class="btn chip" id="scope" type="button" aria-pressed="false">Show the full cookbook</button>
     </div>
-    <div class="grid" id="grid"></div>
+    <div id="grid"></div>
   </section>
 
   <!-- ============ 2. Our week ============ -->
@@ -220,33 +240,47 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
 
 <script src="recipes.js"></script>
 <script>
-const BOOK = window.COOKBOOK || [];
+const BOOK = window.COOKBOOK || [], SIDES = window.SIDES || [], GENRES = window.GENRES || [];
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const KIND = { veg: "Vegetarian", seafood: "Seafood", poultry: "Poultry", meat: "Meat" };
 const AISLES = [["produce", "Produce"], ["protein", "Meat & seafood"], ["dairy", "Dairy"], ["bakery", "Bakery"], ["pantry", "Pantry & dry goods"]];
-const MENU_SIZE = 10;
-
-/* ---------- saved state (this browser only) ---------- */
-const state = { servings: 2, picks: [], done: {}, filter: "all", full: false };
-try { Object.assign(state, JSON.parse(localStorage.getItem("weekly-menu") || "{}")); } catch (e) {}
-state.picks = (state.picks || []).filter((id) => BOOK.some((r) => r.id === id));
-const save = () => { try { localStorage.setItem("weekly-menu", JSON.stringify({ servings: state.servings, picks: state.picks, done: state.done })); } catch (e) {} };
+const PER_GENRE = 3;      // dishes offered from each cuisine in a normal week
 const byId = (id) => BOOK.find((r) => r.id === id);
+const sideById = (id) => SIDES.find((s) => s.id === id);
 const kind = (r) => KIND[r.tags.find((t) => KIND[t])] || "";
+const clock = (m) => m >= 90 ? (m / 60).toFixed(1).replace(".0", "") + " hr" : m + " min";
 
-/* ---------- this week's menu: the same ten dishes for everyone, changing every Monday ---------- */
+/* ---------- saved state (this browser only) ----------
+   picks: [{ id: main dish id, sides: [side ids] }] */
+const state = { servings: 2, picks: [], done: {}, filter: "all", genre: "all", full: false };
+try { Object.assign(state, JSON.parse(localStorage.getItem("weekly-menu") || "{}")); } catch (e) {}
+state.picks = (state.picks || []).map((p) => typeof p === "string" ? { id: p, sides: null } : p)
+  .filter((p) => p && byId(p.id))
+  .map((p) => ({ id: p.id, sides: (p.sides || defaultSides(byId(p.id))).filter(sideById) }));
+const save = () => { try { localStorage.setItem("weekly-menu", JSON.stringify({ servings: state.servings, picks: state.picks, done: state.done })); } catch (e) {} };
+const pickOf = (id) => state.picks.find((p) => p.id === id);
+function defaultSides(r) { return r.complete ? [] : r.pairs.slice(); }
+
+/* A dinner = one main plus its chosen sides. */
+function dinner(p) {
+  const main = byId(p.id), sides = p.sides.map(sideById), all = [main].concat(sides);
+  const sum = (k) => all.reduce((s, r) => s + r[k], 0);
+  return { main, sides, all, kcal: sum("kcal"), protein: sum("protein"), carbs: sum("carbs"), fat: sum("fat"), fiber: sum("fiber"),
+    time: Math.max(main.time, ...sides.map((s) => s.time)) + (sides.length > 1 ? 5 : 0) };
+}
+
+/* ---------- this week's menu: the same dishes for everyone, changing every Monday ---------- */
 function monday(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
 const weekStart = monday(new Date());
 const weekNo = Math.round(weekStart.getTime() / 6048e5);
 function weeklyMenu() {
   let a = weekNo * 2654435761 >>> 0;
   const rand = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  const pool = BOOK.map((r) => [rand(), r]).sort((x, y) => x[0] - y[0]).map((x) => x[1]);
-  // keep the menu varied: at least two vegetarian and two seafood dishes when the cookbook has them
   const out = [];
-  ["veg", "veg", "seafood", "seafood"].forEach((tag) => { const r = pool.find((p) => p.tags.includes(tag) && !out.includes(p)); if (r) out.push(r); });
-  pool.forEach((r) => { if (out.length < MENU_SIZE && !out.includes(r)) out.push(r); });
+  GENRES.forEach((g) => {
+    BOOK.filter((r) => r.genre === g.id).map((r) => [rand(), r]).sort((x, y) => x[0] - y[0]).slice(0, PER_GENRE).forEach((x) => out.push(x[1]));
+  });
   return out;
 }
 const MENU = weeklyMenu();
@@ -264,75 +298,156 @@ function amount(qty, unit) {
   if (!qty) return "";
   if (unit === "oz") { if (qty >= 16) return frac(qty / 16) + " lb"; return (Math.round(qty * 2) / 2).toString().replace(".5", "½").replace(/^0½/, "½") + " oz"; }
   if (unit === "") return frac(Math.max(0.5, Math.ceil(qty * 2 - 1e-9) / 2));    // things you count: round up to the next half
-  const text = frac(qty) || "¼";
+  if (unit === "tsp" && qty >= 3) { unit = "tbsp"; qty /= 3; }
+  const text = frac(qty) === "0" ? "¼" : frac(qty);
   return text + " " + (unit === "cup" && qty > 1.01 ? "cups" : unit);
 }
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const names = (list) => list.map((s) => s.name).join(", ");
 
 /* ---------- 1. menu ---------- */
-const FILTERS = [["all", "Everything"], ["veg", "Vegetarian"], ["seafood", "Seafood"], ["poultry", "Poultry"], ["meat", "Meat"], ["quick", "35 minutes or less"], ["protein", "40g+ protein"]];
-FILTERS.forEach(([key, label]) => {
-  const b = el("button", "btn chip", label);
-  b.type = "button"; b.setAttribute("aria-pressed", String(key === state.filter));
-  b.addEventListener("click", () => { state.filter = key; [...$("filters").children].forEach((c) => c.setAttribute("aria-pressed", String(c === b))); renderMenu(); });
-  $("filters").appendChild(b);
-});
+const FILTERS = [["all", "Everything"], ["veg", "Vegetarian"], ["seafood", "Seafood"], ["poultry", "Poultry"], ["meat", "Meat"], ["quick", "30 minutes or less"], ["protein", "40g+ protein"]];
+function chipRow(box, items, key) {
+  items.forEach(([id, label]) => {
+    const b = el("button", "btn chip", label);
+    b.type = "button"; b.setAttribute("aria-pressed", String(id === state[key]));
+    b.addEventListener("click", () => { state[key] = id; [...box.children].forEach((c) => c.setAttribute("aria-pressed", String(c === b))); renderMenu(); });
+    box.appendChild(b);
+  });
+}
+chipRow($("genres"), [["all", "All cuisines"]].concat(GENRES.map((g) => [g.id, g.name])), "genre");
+chipRow($("filters"), FILTERS, "filter");
 $("scope").addEventListener("click", () => {
   state.full = !state.full;
   $("scope").setAttribute("aria-pressed", String(state.full));
-  $("scope").textContent = state.full ? "Back to this week's menu" : "Show the full cookbook";
+  $("scope").textContent = state.full ? "Back to this week's menu" : "Show the full cookbook (" + BOOK.length + ")";
   renderMenu();
 });
+$("scope").textContent = "Show the full cookbook (" + BOOK.length + ")";
 function matches(r) {
   const f = state.filter;
-  return f === "all" || (f === "quick" ? r.time <= 35 : f === "protein" ? r.protein >= 40 : r.tags.includes(f));
+  return (state.genre === "all" || r.genre === state.genre) &&
+    (f === "all" || (f === "quick" ? r.time <= 30 : f === "protein" ? r.protein >= 40 : r.tags.includes(f)));
 }
-function toggle(id) {
-  state.picks = state.picks.includes(id) ? state.picks.filter((p) => p !== id) : state.picks.concat(id);
-  save(); renderAll();
-}
+function removePick(id) { state.picks = state.picks.filter((p) => p.id !== id); save(); renderAll(); }
 function renderMenu() {
-  const grid = $("grid");
-  grid.textContent = "";
+  const box = $("grid");
+  box.textContent = "";
   const list = (state.full ? BOOK : MENU).filter(matches);
-  if (!list.length) { const s = el("div", "state", "Nothing on the menu matches that filter this week. Try the full cookbook."); s.style.gridColumn = "1 / -1"; grid.appendChild(s); return; }
-  list.forEach((r) => {
-    const on = state.picks.includes(r.id), card = el("article", "dish" + (on ? " picked" : ""));
-    const top = el("div", "kind mono");
-    top.append(el("span", null, kind(r) + (r.tags.includes("weekend") ? " · weekend project" : "")), el("span", null, r.level));
-    const facts = el("div", "facts");
-    [[r.time >= 90 ? (r.time / 60).toFixed(1).replace(".0", "") + " hr" : r.time + " min", ""], [r.kcal, " kcal"], [r.protein + "g", " protein"]].forEach(([v, l]) => { const s = el("span"); s.append(el("b", "num", String(v)), l); facts.appendChild(s); });
-    const row = el("div", "row"), view = el("button", "btn", "Recipe"), add = el("button", "btn " + (on ? "on" : "primary"), on ? "✓ Added" : "Add to week");
-    view.type = add.type = "button";
-    view.addEventListener("click", () => openRecipe(r.id));
-    add.addEventListener("click", () => toggle(r.id));
-    add.setAttribute("aria-pressed", String(on));
-    row.append(view, add);
-    card.append(top, el("h3", null, r.name), el("div", "side", r.side), el("p", null, r.blurb), facts, row);
-    grid.appendChild(card);
+  if (!list.length) { box.appendChild(el("div", "state", "Nothing on this week's menu matches. Try another cuisine or open the full cookbook.")); return; }
+  GENRES.forEach((g) => {
+    const dishes = list.filter((r) => r.genre === g.id);
+    if (!dishes.length) return;
+    const head = el("div", "genre");
+    head.append(el("h2", null, g.name), el("p", null, g.blurb), el("span", "mono", dishes.length + (dishes.length === 1 ? " dish" : " dishes")));
+    const grid = el("div", "grid");
+    dishes.forEach((r) => grid.appendChild(card(r)));
+    box.append(head, grid);
   });
+}
+function card(r) {
+  const p = pickOf(r.id), node = el("article", "dish" + (p ? " picked" : ""));
+  const top = el("div", "kind mono");
+  top.append(el("span", null, kind(r) + (r.tags.includes("weekend") ? " · weekend project" : "")), el("span", null, r.level));
+  const pair = el("div", "side");
+  if (p) pair.textContent = p.sides.length ? "with " + names(p.sides.map(sideById)).toLowerCase() : "no sides";
+  else pair.textContent = r.pairs.length ? (r.complete ? "a full meal · try with " : "pairs with ") + names(r.pairs.map(sideById)).toLowerCase() : "a full meal by itself";
+  const facts = el("div", "facts");
+  [[clock(r.time), ""], [r.kcal, " kcal"], [r.protein + "g", " protein"]].forEach(([v, l]) => { const s = el("span"); s.append(el("b", "num", String(v)), l); facts.appendChild(s); });
+  const row = el("div", "row"), view = el("button", "btn", "Recipe"), add = el("button", "btn " + (p ? "on" : "primary"), p ? "✓ Added · sides" : "Add to week");
+  view.type = add.type = "button";
+  view.addEventListener("click", () => openRecipe(r.id));
+  add.addEventListener("click", () => openSides(r.id));
+  row.append(view, add);
+  node.append(top, el("h3", null, r.name), pair, el("p", null, r.blurb), facts, row);
+  return node;
+}
+
+/* ---------- choosing sides ---------- */
+function openSides(id) {
+  const r = byId(id), existing = pickOf(id), chosen = new Set(existing ? existing.sides : defaultSides(r)), sheet = $("sheet");
+  sheet.textContent = "";
+  const close = el("button", "btn close", "Close");
+  close.type = "button"; close.addEventListener("click", () => $("recipe").close());
+  const h = el("h2", null, r.name); h.id = "rName";
+  const total = el("p", "total");
+  const go = el("button", "btn primary", "");
+  go.type = "button";
+  function refresh() {
+    const d = dinner({ id, sides: [...chosen] });
+    total.textContent = "";
+    total.append("This dinner, per person: ", el("b", "num", d.kcal + " kcal"), " · ", el("b", "num", d.protein + "g protein"), " · about ", el("b", "num", clock(d.time)));
+    go.textContent = existing ? "Save sides" : chosen.size ? "Add to week with " + chosen.size + (chosen.size === 1 ? " side" : " sides") : "Add to week without sides";
+  }
+  const groups = [["Suggested with this dish", SIDES.filter((s) => r.pairs.includes(s.id))],
+    ["Potatoes, grains & bread", SIDES.filter((s) => s.type === "starch" && !r.pairs.includes(s.id))],
+    ["Vegetables & salads", SIDES.filter((s) => s.type === "veg" && !r.pairs.includes(s.id))]];
+  const lists = el("div");
+  groups.forEach(([label, sides]) => {
+    if (!sides.length) return;
+    lists.appendChild(el("h3", null, label));
+    const grid = el("div", "sidegrid");
+    sides.forEach((s) => {
+      const lab = el("label", "sidepick" + (chosen.has(s.id) ? " on" : "")), box = el("input"), txt = el("span", null, s.name);
+      box.type = "checkbox"; box.checked = chosen.has(s.id);
+      box.addEventListener("change", () => { if (box.checked) chosen.add(s.id); else chosen.delete(s.id); lab.classList.toggle("on", box.checked); refresh(); });
+      txt.appendChild(el("small", "num", s.kcal + " kcal · " + s.time + " min"));
+      lab.append(box, txt);
+      grid.appendChild(lab);
+    });
+    lists.appendChild(grid);
+  });
+  go.addEventListener("click", () => {
+    const sides = SIDES.filter((s) => chosen.has(s.id)).map((s) => s.id);
+    if (existing) existing.sides = sides; else state.picks.push({ id, sides });
+    save(); renderAll(); $("recipe").close();
+  });
+  const foot = el("div", "sheetfoot");
+  foot.appendChild(go);
+  if (existing) { const rm = el("button", "btn", "Remove from week"); rm.type = "button"; rm.addEventListener("click", () => { removePick(id); $("recipe").close(); }); foot.appendChild(rm); }
+  sheet.append(close, el("div", "mono leaf", "Choose your sides"), h,
+    el("p", "sub", r.complete ? "This one is a full meal by itself. Add a side only if you want one." : "The suggested sides are ticked. Swap them for anything you like, or add more."),
+    lists, total, foot);
+  refresh();
+  if (!$("recipe").open) $("recipe").showModal();
+  $("recipe").scrollTop = 0;
 }
 
 /* ---------- recipe sheet ---------- */
+function ingList(r, k) {
+  const ing = el("ul", "ing");
+  r.ingredients.forEach(([q, u, name]) => { const li = el("li"); li.append(el("span", "amt num", amount(q * k, u)), el("span", null, cap(name))); ing.appendChild(li); });
+  return ing;
+}
 function openRecipe(id) {
-  const r = byId(id), sheet = $("sheet"), k = state.servings / 2;
+  const r = byId(id), p = pickOf(id), sheet = $("sheet"), k = state.servings / 2;
+  const sides = (p ? p.sides : r.pairs).map(sideById);
   sheet.textContent = "";
   const close = el("button", "btn close", "Close");
   close.type = "button"; close.addEventListener("click", () => $("recipe").close());
   const h = el("h2", null, r.name); h.id = "rName";
   const facts = el("div", "facts");
-  [["Time", r.time >= 90 ? (r.time / 60).toFixed(1).replace(".0", "") + " hr" : r.time + " min"], ["Level", r.level], ["Per person", r.kcal + " kcal · " + r.protein + "g protein · " + r.carbs + "g carbs · " + r.fat + "g fat · " + r.fiber + "g fibre"]]
+  [["Time", clock(r.time)], ["Level", r.level], ["Per person", r.kcal + " kcal · " + r.protein + "g protein · " + r.carbs + "g carbs · " + r.fat + "g fat · " + r.fiber + "g fibre"]]
     .forEach(([l, v]) => { const s = el("span"); s.append(l + " ", el("b", null, v)); facts.appendChild(s); });
-  const ing = el("ul", "ing");
-  r.ingredients.forEach(([q, u, name]) => { const li = el("li"); li.append(el("span", "amt num", amount(q * k, u)), el("span", null, cap(name))); ing.appendChild(li); });
   const steps = el("ol", "steps");
   r.steps.forEach((s) => steps.appendChild(el("li", null, s)));
-  const on = state.picks.includes(id), add = el("button", "btn " + (on ? "on" : "primary"), on ? "✓ On our week (tap to remove)" : "Add to our week");
+  sheet.append(close, el("div", "mono leaf", kind(r) + " · " + GENRES.find((g) => g.id === r.genre).name), h, facts,
+    el("h3", null, "Ingredients for " + state.servings), ingList(r, k), el("h3", null, "Method"), steps, el("p", "chef", r.note));
+  if (sides.length) {
+    sheet.appendChild(el("h3", null, p ? "Your sides" : "Suggested sides"));
+    sides.forEach((s) => {
+      const d = el("details", "sidercp"), sum = el("summary");
+      sum.append(el("span", null, s.name), el("small", "num", s.kcal + " kcal · " + s.time + " min"));
+      const st = el("ol", "steps");
+      s.steps.forEach((x) => st.appendChild(el("li", null, x)));
+      d.append(sum, ingList(s, k), st);
+      sheet.appendChild(d);
+    });
+  }
+  const add = el("button", "btn primary", p ? "Change sides" : "Add to week");
   add.type = "button"; add.style.marginTop = "24px";
-  add.addEventListener("click", () => { toggle(id); openRecipe(id); });
-  sheet.append(close, el("div", "mono", kind(r)), h, el("div", "side", r.side), facts,
-    el("h3", null, "Ingredients for " + state.servings), ing, el("h3", null, "Method"), steps, el("p", "chef", r.note), add);
-  sheet.querySelector(".mono").style.color = "var(--leaf)";
+  add.addEventListener("click", () => openSides(id));
+  sheet.appendChild(add);
   if (!$("recipe").open) $("recipe").showModal();
   $("recipe").scrollTop = 0;
 }
@@ -340,23 +455,24 @@ $("recipe").addEventListener("click", (e) => { if (e.target === $("recipe")) $("
 
 /* ---------- 2. our week ---------- */
 function renderWeek() {
-  const picks = state.picks.map(byId).filter(Boolean), n = picks.length;
+  const dinners = state.picks.map(dinner), n = dinners.length;
   $("tabWeek").textContent = "2 · Our week" + (n ? " (" + n + ")" : "");
   $("weekEmpty").hidden = n > 0; $("weekBody").hidden = n === 0;
   if (!n) return;
-  const active = picks.reduce((s, r) => s + r.time, 0);
+  const active = dinners.reduce((s, d) => s + d.time, 0);
   $("weekSub").textContent = n + (n === 1 ? " dinner" : " dinners") + " for " + state.servings + " people · about " + (active >= 120 ? (active / 60).toFixed(1).replace(".0", "") + " hours" : active + " minutes") + " of cooking in total";
   const ul = $("picks");
   ul.textContent = "";
-  picks.forEach((r) => {
-    const li = el("li"), nm = el("div", "nm", r.name), view = el("button", "link", "Recipe"), x = el("button", "link x", "Remove");
-    nm.appendChild(el("small", null, r.side + " · " + r.time + " min · " + r.kcal + " kcal"));
-    view.type = x.type = "button";
-    view.addEventListener("click", () => openRecipe(r.id)); x.addEventListener("click", () => toggle(r.id));
-    li.append(nm, view, x); ul.appendChild(li);
+  dinners.forEach((d) => {
+    const li = el("li"), nm = el("div", "nm", d.main.name), view = el("button", "link", "Recipe"), ch = el("button", "link", "Sides"), x = el("button", "link x", "Remove");
+    nm.appendChild(el("small", null, (d.sides.length ? "with " + names(d.sides).toLowerCase() : "no sides") + " · " + clock(d.time) + " · " + d.kcal + " kcal"));
+    view.type = ch.type = x.type = "button";
+    view.addEventListener("click", () => openRecipe(d.main.id)); ch.addEventListener("click", () => openSides(d.main.id)); x.addEventListener("click", () => removePick(d.main.id));
+    const acts = el("div", "acts"); acts.append(view, ch, x);
+    li.append(nm, acts); ul.appendChild(li);
   });
 
-  const avg = (k) => picks.reduce((s, r) => s + r[k], 0) / n;
+  const avg = (k) => dinners.reduce((s, d) => s + d[k], 0) / n;
   const a = { kcal: avg("kcal"), protein: avg("protein"), carbs: avg("carbs"), fat: avg("fat"), fiber: avg("fiber") };
   const tiles = $("tiles");
   tiles.textContent = "";
@@ -372,15 +488,18 @@ function renderWeek() {
   });
 
   // plain-language observations about the mix
-  const notes = $("notes"), count = (t) => picks.filter((r) => r.tags.includes(t)).length;
+  const notes = $("notes"), count = (t) => dinners.filter((d) => d.main.tags.includes(t)).length;
   notes.textContent = "";
   const mix = Object.keys(KIND).filter((t) => count(t)).map((t) => count(t) + " " + KIND[t].toLowerCase());
-  const say = [ "The mix: " + mix.join(", ") + "." ];
+  const cuisines = [...new Set(dinners.map((d) => GENRES.find((g) => g.id === d.main.genre).name))];
+  const say = ["The mix: " + mix.join(", ") + ", across " + cuisines.join(", ") + "."];
   if (n >= 3 && !count("veg")) say.push("No vegetarian dinner this week. Swapping one in usually adds fibre and lightens the week.");
   if (n >= 3 && !count("seafood")) say.push("No seafood this week.");
   if (count("meat") >= 3) say.push("Three or more red-meat dinners. A fish or vegetarian night would balance it.");
-  if (a.fiber < 6) say.push("Fibre is on the low side at about " + Math.round(a.fiber) + "g a dinner. The bean, grain and vegetable-led dishes raise it most.");
-  const heavy = picks.filter((r) => r.kcal >= 750).map((r) => r.name);
+  const noVeg = dinners.filter((d) => !d.main.complete && !d.sides.some((s) => s.type === "veg")).map((d) => d.main.name);
+  if (noVeg.length) say.push("No vegetable side with: " + noVeg.join("; ") + ".");
+  if (a.fiber < 7) say.push("Fibre is on the low side at about " + Math.round(a.fiber) + "g a dinner. Bean, grain and vegetable sides raise it most.");
+  const heavy = dinners.filter((d) => d.kcal >= 900).map((d) => d.main.name);
   if (heavy.length) say.push("Richest " + (heavy.length === 1 ? "dinner" : "dinners") + ": " + heavy.join("; ") + ".");
   say.forEach((s) => notes.appendChild(el("li", null, s)));
 
@@ -389,9 +508,10 @@ function renderWeek() {
   const head = el("tr");
   [["Dinner", ""], ["kcal", "r"], ["Protein", "r"], ["Carbs", "r"], ["Fat", "r"], ["Fibre", "r"]].forEach(([t, c]) => head.appendChild(el("th", c, t)));
   table.appendChild(head);
-  picks.forEach((r) => {
-    const tr = el("tr");
-    tr.append(el("td", null, r.name), el("td", "r num", String(r.kcal)), el("td", "r num", r.protein + "g"), el("td", "r num", r.carbs + "g"), el("td", "r num", r.fat + "g"), el("td", "r num", r.fiber + "g"));
+  dinners.forEach((d) => {
+    const tr = el("tr"), name = el("td", null, d.main.name);
+    if (d.sides.length) name.appendChild(el("small", null, names(d.sides)));
+    tr.append(name, el("td", "r num", String(d.kcal)), el("td", "r num", d.protein + "g"), el("td", "r num", d.carbs + "g"), el("td", "r num", d.fat + "g"), el("td", "r num", d.fiber + "g"));
     table.appendChild(tr);
   });
 }
@@ -406,12 +526,13 @@ $("reset").addEventListener("click", () => {
 /* ---------- 3. shopping list ---------- */
 function buildList() {
   const k = state.servings / 2, lines = {}, staples = new Set();
-  state.picks.map(byId).filter(Boolean).forEach((r) => r.ingredients.forEach(([q, u, name, section, staple]) => {
+  state.picks.map(dinner).forEach((d) => d.all.forEach((r) => r.ingredients.forEach(([q, u, name, section, staple]) => {
     if (staple || !q) { staples.add(name); return; }
-    const key = name + "|" + u;
-    const line = lines[key] || (lines[key] = { key, name, unit: u, section, qty: 0, for: [] });
-    line.qty += q * k; line.for.push(r.name);
-  }));
+    const spoon = u === "tsp" || u === "tbsp";      // teaspoons and tablespoons of the same thing are added together
+    const key = name + "|" + (spoon ? "spoon" : u);
+    const line = lines[key] || (lines[key] = { key, name, unit: spoon ? "tsp" : u, section, qty: 0, for: new Set() });
+    line.qty += q * k * (u === "tbsp" ? 3 : 1); line.for.add(d.main.name);
+  })));
   return { lines: Object.values(lines), staples: [...staples].sort() };
 }
 function renderList() {
@@ -431,7 +552,7 @@ function renderList() {
       const row = el("label", "item" + (state.done[l.key] ? " done" : "")), box2 = el("input"), name = el("span", null, cap(l.name));
       box2.type = "checkbox"; box2.checked = !!state.done[l.key];
       box2.addEventListener("change", () => { if (box2.checked) state.done[l.key] = 1; else delete state.done[l.key]; save(); renderList(); });
-      if (l.for.length > 1) name.appendChild(el("small", null, "for " + l.for.length + " dinners"));
+      if (l.for.size > 1) name.appendChild(el("small", null, "for " + l.for.size + " dinners"));
       row.append(box2, name, el("span", "amt num", amount(l.qty, l.unit)));
       aisle.appendChild(row);
     });
@@ -444,7 +565,9 @@ function renderList() {
   }
 }
 function listText() {
-  const { lines, staples } = buildList(), out = ["Shopping list: " + state.picks.map((id) => byId(id).name).join("; "), ""];
+  const { lines, staples } = buildList(), out = ["DINNERS"];
+  state.picks.map(dinner).forEach((d) => out.push("- " + d.main.name + (d.sides.length ? " with " + names(d.sides).toLowerCase() : "")));
+  out.push("");
   AISLES.forEach(([id, label]) => {
     const items = lines.filter((l) => l.section === id).sort((a, b) => a.name.localeCompare(b.name));
     if (!items.length) return;
