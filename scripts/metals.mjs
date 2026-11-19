@@ -32,8 +32,7 @@ let old = {};
 try { old = JSON.parse(await readFile("data/metals.json", "utf8")); } catch (e) {}
 
 /* ---------- LME daily: cash, 3-month, stocks ---------- */
-function lme(field) {
-  const html = get("https://www.westmetall.com/en/markdaten.php?action=table&field=" + field);
+function lmeTable(html) {
   const rows = [];
   for (const m of html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)) {
     const cells = [...m[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g)].map((c) => c[1].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim());
@@ -46,16 +45,33 @@ function lme(field) {
   }
   return rows;
 }
+/* This year's table, plus earlier years the first time (the page links to one table per year). */
+function lme(field, haveHistory) {
+  const base = "https://www.westmetall.com/en/markdaten.php", html = get(base + "?action=table&field=" + field);
+  let rows = lmeTable(html);
+  if (!haveHistory) {
+    const thisYear = new Date().getUTCFullYear();
+    for (const y of [thisYear - 1, thisYear - 2]) {
+      const link = html.match(new RegExp('href="([^"]*' + field + '[^"]*)"[^>]*>\\s*' + y + '\\s*<')) || html.match(new RegExp('href="([^"]*)"[^>]*>\\s*' + y + '\\s*<'));
+      if (!link) { console.log("  no link for", field, y); continue; }
+      const url = new URL(link[1].replace(/&amp;/g, "&"), base + "?").href, older = lmeTable(get(url));
+      console.log("  history", field, y, url, older.length, "rows");
+      rows = rows.concat(older);
+    }
+  }
+  return rows;
+}
 function mergeRows(prev, next) {
   const map = new Map((prev || []).map((r) => [r[0], r]));
   next.forEach((r) => map.set(r[0], r));
   return [...map.values()].sort((a, b) => (a[0] < b[0] ? -1 : 1));
 }
 const lmeOut = {};
-for (const [key, field] of [["copper", "LME_Cu_cash"], ["aluminum", "LME_Al_cash"]]) {
-  const rows = lme(field);
+for (const [key, field] of [["copper", "LME_Cu_cash"], ["aluminum", "LME_Al_cash"], ["zinc", "LME_Zn_cash"], ["nickel", "LME_Ni_cash"], ["lead", "LME_Pb_cash"], ["tin", "LME_Sn_cash"]]) {
+  const prev = old.lme && old.lme[key];
+  const rows = lme(field, prev && prev.length > 300);
   if (!rows.length) errors.push("LME " + key + " table could not be read");
-  lmeOut[key] = mergeRows(old.lme && old.lme[key], rows).slice(-800);
+  lmeOut[key] = mergeRows(prev, rows).slice(-1100);
   console.log("LME", key, rows.length, "rows, latest", JSON.stringify(lmeOut[key][lmeOut[key].length - 1]));
 }
 
@@ -109,14 +125,20 @@ const TICKERS = [
   ["AA", "stocks", "aluminum", "Alcoa", "Bauxite, alumina and aluminium producer"], ["CENX", "stocks", "aluminum", "Century Aluminum", "US primary aluminium smelter"], ["KALU", "stocks", "aluminum", "Kaiser Aluminum", "Aluminium mill products"],
   ["SLX", "etf", "steel", "VanEck Steel ETF", "Basket of global steel shares"], ["NUE", "stocks", "steel", "Nucor", "Largest US steelmaker, electric-arc"], ["STLD", "stocks", "steel", "Steel Dynamics", "US electric-arc steelmaker"],
   ["CLF", "stocks", "steel", "Cleveland-Cliffs", "US integrated steelmaker"], ["MT", "stocks", "steel", "ArcelorMittal", "Global steelmaker"],
-  ["XME", "etf", "all", "SPDR Metals & Mining ETF", "Broad US metals and mining shares"]
+  ["XME", "etf", "all", "SPDR Metals & Mining ETF", "Broad US metals and mining shares"],
+  ["TECK", "stocks", "copper", "Teck Resources", "Copper and zinc miner, Canada and Chile"], ["BHP", "stocks", "copper", "BHP", "Largest miner: copper and iron ore"], ["RIO", "stocks", "aluminum", "Rio Tinto", "Iron ore, aluminium and copper"],
+  ["VALE", "stocks", "steel", "Vale", "Largest iron ore producer"], ["CMC", "stocks", "steel", "Commercial Metals", "US rebar and scrap recycler"], ["RS", "stocks", "steel", "Reliance", "Largest US metals service centre"],
+  ["DBB", "etf", "all", "Invesco DB Base Metals", "Fund tracking copper, aluminium and zinc futures"], ["PICK", "etf", "all", "iShares Global Metals & Mining", "Global diversified miners"],
+  ["UUP", "etf", "driver", "US dollar (UUP)", "Dollar index fund. A stronger dollar usually weighs on metals"], ["FXI", "etf", "driver", "China large caps (FXI)", "China shares. China uses about half the world's metal"],
+  ["ITB", "etf", "driver", "US homebuilders (ITB)", "Housing is a big user of copper and steel"], ["XLI", "etf", "driver", "US industrials (XLI)", "Manufacturing demand"],
+  ["USO", "etf", "driver", "Crude oil (USO)", "Energy cost and general commodity mood"], ["SPY", "etf", "driver", "S&P 500 (SPY)", "Overall risk appetite"]
 ];
-const today = new Date(), from = new Date(today.getTime() - 400 * 864e5);
+const today = new Date(), from = new Date(today.getTime() - 800 * 864e5);
 const eqOut = {};
 for (const [sym, cls, metal, name, what] of TICKERS) {
   let rows = [];
   try {
-    const j = JSON.parse(get(`https://api.nasdaq.com/api/quote/${sym}/historical?assetclass=${cls}&fromdate=${iso(from)}&todate=${iso(today)}&limit=400`));
+    const j = JSON.parse(get(`https://api.nasdaq.com/api/quote/${sym}/historical?assetclass=${cls}&fromdate=${iso(from)}&todate=${iso(today)}&limit=900`));
     rows = j.data.tradesTable.rows.map((r) => { const [m, d, y] = r.date.split("/"); return [`${y}-${m}-${d}`, num(r.close)]; }).filter((r) => r[1] != null).sort((a, b) => (a[0] < b[0] ? -1 : 1));
   } catch (e) {}
   if (!rows.length && old.equities && old.equities[sym]) rows = old.equities[sym].rows;
