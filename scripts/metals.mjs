@@ -85,7 +85,7 @@ for (const [key, code] of [["copper", "PCOPP"], ["aluminum", "PALUM"], ["ironore
 
 /* ---------- US producer price indexes (BLS) ---------- */
 const PPI = [
-  ["WPU101", "Iron and steel", "steel"], ["WPU1017", "Steel mill products", "steel"], ["WPU101703", "Hot rolled steel sheet and strip", "steel"],
+  ["WPU101", "Iron and steel", "steel"], ["WPU1017", "Steel mill products", "steel"],
   ["WPU101707", "Cold rolled steel sheet and strip", "steel"], ["WPU1012", "Iron and steel scrap", "steel"],
   ["WPU102502", "Copper and brass mill shapes", "copper"], ["WPU102301", "Copper base scrap", "copper"], ["WPU102501", "Aluminum mill shapes", "aluminum"]
 ];

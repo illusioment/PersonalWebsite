@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metals Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* The hub's forest-and-sunlight tokens. Layout: three headline tiles, then one
+   metal at a time: a plain-language read, key figures, daily charts, related
+   shares, monthly indexes and news. Chart series use two colours checked for
+   colour-blind separation on the panel: amber (--s1) and blue (--s2). */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --s1: #BF8A12; --s2: #4A90C9; --grid: rgba(147, 181, 165, .16);
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.55;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%);
+  background-attachment: fixed;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 56px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--leaf); }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+.top span { color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+.lede { color: var(--muted); max-width: 64ch; margin: 0 0 28px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 18px; margin: 0 0 4px; }
+.sub { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+
+.heads { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.head { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 4px 12px; align-items: end; }
+.head:hover, .head[aria-pressed="true"] { border-color: var(--sun); }
+.head .mono { color: var(--muted); grid-column: 1 / -1; }
+.head strong { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.15; }
+.head small { color: var(--muted); font-size: 13px; display: block; }
+.head svg { width: 110px; height: 40px; }
+
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-bottom: 20px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; color: var(--muted); }
+.btn:hover, .btn[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); }
+.filters .lab { color: var(--muted); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; min-width: 0; }
+.read { border-color: var(--sun); }
+.read p { margin: 0; max-width: 78ch; }
+.read p + p { margin-top: 10px; }
+.read b { font-weight: 600; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.stat .mono { color: var(--muted); display: block; margin-bottom: 4px; }
+.stat strong { font-family: var(--font-display); font-weight: 400; font-size: 20px; }
+.stat small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.up::before { content: "▲ "; color: var(--leaf); font-size: .75em; }
+.dn::before { content: "▼ "; color: var(--down); font-size: .75em; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.two .panel { margin-bottom: 0; }
+.two { margin-bottom: 16px; }
+
+/* charts */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 4; }
+.chart .tick { fill: var(--muted); font-family: var(--font-mono); font-size: 11px; }
+.chart .endlabel { fill: var(--text); font-family: var(--font-mono); font-size: 11.5px; }
+.chart .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .cross { stroke: var(--muted); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid; vertical-align: middle; margin-right: 6px; }
+.tip { position: absolute; top: 0; left: 0; pointer-events: none; background: #06140F; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; white-space: nowrap; z-index: 2; }
+.tip .d { color: var(--muted); margin-bottom: 4px; }
+.tip .r { display: flex; align-items: center; gap: 8px; }
+.tip .r i { width: 12px; border-top: 2px solid; }
+.tip .r b { font-weight: 600; font-family: var(--font-mono); }
+.tip .r span { color: var(--muted); }
+details.table { margin-top: 10px; font-size: 13px; color: var(--muted); }
+details.table summary { cursor: pointer; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-weight: 400; color: var(--muted); padding: 8px 12px 8px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 12px 10px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+th.r, td.r { text-align: right; padding-right: 0; padding-left: 12px; white-space: nowrap; }
+td small { display: block; color: var(--muted); font-size: 12.5px; }
+td svg { width: 96px; height: 28px; display: block; margin-left: auto; }
+.minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 24px 28px; }
+.mini h3 { font-family: var(--font-body); font-weight: 600; font-size: 14.5px; margin: 0; }
+.mini .v { color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+.mini .v b { color: var(--text); font-weight: 400; font-family: var(--font-mono); }
+
+.news { list-style: none; margin: 0; padding: 0; }
+.news li { padding: 12px 0; border-bottom: 1px solid rgba(42, 90, 75, .5); }
+.news li:last-child { border-bottom: 0; }
+.news a { color: var(--text); text-decoration: none; font-weight: 400; }
+.news a:hover { color: var(--sun); text-decoration: underline; }
+.news small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.more { margin-top: 12px; }
+details.notes summary { cursor: pointer; font-family: var(--font-display); font-size: 16px; }
+details.notes ul { margin: 14px 0 0; padding-left: 20px; color: var(--muted); max-width: 80ch; }
+details.notes li { margin-bottom: 8px; }
+details.notes b { color: var(--text); font-weight: 600; }
+.state { padding: 44px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; }
+footer { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; max-width: 86ch; }
+footer p { margin: 0 0 8px; }
+@media (max-width: 720px) { .wrap { padding: 0 16px 40px; } .panel { padding: 18px 16px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="mono" href="../../">← Back to hub</a>
+    <span class="mono" id="stamp"></span>
+  </header>
+
+  <h1>Metals Desk</h1>
+  <p class="lede">Copper, aluminium and steel in one place: exchange prices and stocks, producer price indexes, the shares that trade on them, and the headlines moving them.</p>
+
+  <div class="heads" id="heads"></div>
+
+  <div class="filters">
+    <div class="seg" id="metalTabs" role="group" aria-label="Metal"></div>
+    <span class="lab mono">Daily charts</span>
+    <div class="seg" id="ranges" role="group" aria-label="Time range"></div>
+  </div>
+
+  <main id="view"><div class="state">Loading market data…</div></main>
+
+  <footer>
+    <p><b>Sources.</b> LME cash settlement, 3-month prices and warehouse stocks as published in <a href="https://www.westmetall.com/en/markdaten.php" target="_blank" rel="noopener">Westmetall's market data tables</a>. US producer price indexes from the <a href="https://www.bls.gov/ppi/" target="_blank" rel="noopener">Bureau of Labor Statistics</a>. Share and fund closes from Nasdaq. Headlines from Google News and trade press feeds; each link opens the publisher's own page.</p>
+    <p>Prices are end-of-day or monthly, collected four times a day, and can lag the market. This is a personal reference page, not a trading tool and not investment advice.</p>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const SVG = "http://www.w3.org/2000/svg";
+const svgEl = (tag, attrs) => { const n = document.createElementNS(SVG, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+const LB = 2204.62;
+const METALS = [["copper", "Copper"], ["aluminum", "Aluminium"], ["steel", "Steel"]];
+const RANGES = [["1M", 31], ["3M", 92], ["6M", 183], ["YTD", -1], ["All", 0]];
+const state = { data: null, metal: "copper", range: "6M", newsShown: 12 };
+try { const m = location.hash.slice(1); if (METALS.some((x) => x[0] === m)) state.metal = m; } catch (e) {}
+
+/* ---------- formatting ---------- */
+const usd = (v, d = 0) => v == null ? "–" : "$" + v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const n0 = (v) => v == null ? "–" : Math.round(v).toLocaleString("en-US");
+const pct = (v, d = 1) => v == null ? "–" : (v > 0 ? "+" : "") + (v * 100).toFixed(d) + "%";
+const day = (s) => new Date(s + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+const dayY = (s) => new Date(s + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const month = (s) => new Date(s + "-15T12:00:00").toLocaleDateString(undefined, { month: "short", year: "numeric" });
+function ago(iso) {
+  const h = (Date.now() - new Date(iso)) / 36e5;
+  return h < 1 ? "under an hour ago" : h < 36 ? Math.round(h) + (Math.round(h) === 1 ? " hour ago" : " hours ago") : Math.round(h / 24) + " days ago";
+}
+/* change helpers on [[date, value], ...] rows */
+const last = (rows, back = 0) => rows.length > back ? rows[rows.length - 1 - back] : null;
+function change(rows, back) { const a = last(rows), b = last(rows, back); return a && b && b[1] ? a[1] / b[1] - 1 : null; }
+function ytd(rows) { const a = last(rows); if (!a) return null; const y = a[0].slice(0, 4), first = rows.find((r) => r[0].startsWith(y)); return first && first[1] ? a[1] / first[1] - 1 : null; }
+function slice(rows) {
+  const r = RANGES.find((x) => x[0] === state.range)[1];
+  if (!rows.length || r === 0) return rows;
+  const end = rows[rows.length - 1][0];
+  const from = r < 0 ? end.slice(0, 4) + "-01-01" : new Date(new Date(end + "T12:00:00").getTime() - r * 864e5).toISOString().slice(0, 10);
+  return rows.filter((x) => x[0] >= from);
+}
+function delta(v, text) { const s = el("span", v == null ? "" : v >= 0 ? "up" : "dn", text); return s; }
+
+/* ---------- charts ---------- */
+function spark(rows, color) {
+  const svg = svgEl("svg", { viewBox: "0 0 100 30", preserveAspectRatio: "none", "aria-hidden": "true" });
+  if (rows.length < 2) return svg;
+  const vals = rows.map((r) => r[1]), lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const pts = rows.map((r, i) => (i / (rows.length - 1) * 100).toFixed(1) + "," + (27 - (r[1] - lo) / span * 24).toFixed(1)).join(" ");
+  svg.appendChild(svgEl("polyline", { points: pts, fill: "none", stroke: color || "var(--s1)", "stroke-width": 1.6, "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round" }));
+  return svg;
+}
+/* Line chart with a crosshair tooltip. series: [{ name, color, rows: [[label, value]] }], all sharing the same labels. */
+function lineChart(opts) {
+  const box = el("div", "chart"), series = opts.series.filter((s) => s.rows.length > 1);
+  if (!series.length) { box.appendChild(el("p", "sub", "Not enough data for this range yet.")); return box; }
+  if (series.length > 1) {
+    const lg = el("div", "legend");
+    series.forEach((s) => { const k = el("span"), sw = el("i"); sw.style.borderColor = s.color; k.append(sw, s.name); lg.appendChild(k); });
+    box.appendChild(lg);
+  }
+  const W = 720, H = opts.height || 260, padL = 58, padR = series.length > 1 ? 70 : 64, padT = 12, padB = 26;
+  const labels = series[0].rows.map((r) => r[0]), n = labels.length;
+  const all = series.flatMap((s) => s.rows.map((r) => r[1])).filter((v) => v != null);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (opts.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+  const pad = (hi - lo || Math.abs(hi) || 1) * 0.08; lo -= pad; hi += pad;
+  const X = (i) => padL + (n === 1 ? 0 : i / (n - 1)) * (W - padL - padR), Y = (v) => padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB);
+  const fmt = opts.fmt || n0, svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0", "aria-label": opts.label || series.map((s) => s.name).join(" and ") });
+  // round-number gridlines
+  const rough = (hi - lo) / 4, mag = Math.pow(10, Math.floor(Math.log10(rough))), step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((m) => m >= rough);
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+    const y = Y(v);
+    svg.appendChild(svgEl("line", { class: "gridline", x1: padL, x2: W - padR, y1: y, y2: y }));
+    const t = svgEl("text", { class: "tick", x: padL - 8, y: y + 4, "text-anchor": "end" }); t.textContent = fmt(v); svg.appendChild(t);
+  }
+  if (opts.zero && lo < 0 && hi > 0) svg.appendChild(svgEl("line", { class: "zero", x1: padL, x2: W - padR, y1: Y(0), y2: Y(0) }));
+  [0, Math.floor((n - 1) / 2), n - 1].forEach((i, k) => {
+    const t = svgEl("text", { class: "tick", x: X(i), y: H - 6, "text-anchor": k === 0 ? "start" : k === 2 ? "end" : "middle" });
+    t.textContent = (opts.xfmt || day)(labels[i]); svg.appendChild(t);
+  });
+  const ends = [];
+  series.forEach((s) => {
+    const d = s.rows.map((r, i) => r[1] == null ? "" : (i && s.rows[i - 1][1] != null ? "L" : "M") + X(i).toFixed(1) + " " + Y(r[1]).toFixed(1)).join(" ");
+    svg.appendChild(svgEl("path", { class: "line", d, stroke: s.color }));
+    const e = s.rows[n - 1];
+    if (e && e[1] != null) { svg.appendChild(svgEl("circle", { cx: X(n - 1), cy: Y(e[1]), r: 4, fill: s.color, stroke: "var(--panel)", "stroke-width": 2 })); ends.push({ y: Y(e[1]), text: fmt(e[1]) }); }
+  });
+  ends.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 14) ends[i].y = ends[i - 1].y + 14;     // keep end labels from colliding
+  ends.forEach((e) => { const t = svgEl("text", { class: "endlabel", x: W - padR + 9, y: e.y + 4 }); t.textContent = e.text; svg.appendChild(t); });
+
+  // hover layer: a hairline that snaps to the nearest date, with one tooltip for every series
+  const cross = svgEl("line", { class: "cross", y1: padT, y2: H - padB, visibility: "hidden" }), dots = series.map((s) => svgEl("circle", { r: 4.5, fill: s.color, stroke: "var(--panel)", "stroke-width": 2, visibility: "hidden" }));
+  svg.append(cross, ...dots);
+  const tip = el("div", "tip"); tip.hidden = true;
+  let at = n - 1;
+  function show(i) {
+    at = Math.max(0, Math.min(n - 1, i));
+    cross.setAttribute("x1", X(at)); cross.setAttribute("x2", X(at)); cross.setAttribute("visibility", "visible");
+    tip.textContent = "";
+    tip.appendChild(el("div", "d", (opts.tipfmt || opts.xfmt || dayY)(labels[at])));
+    series.forEach((s, k) => {
+      const v = s.rows[at] && s.rows[at][1];
+      if (v == null) { dots[k].setAttribute("visibility", "hidden"); return; }
+      dots[k].setAttribute("cx", X(at)); dots[k].setAttribute("cy", Y(v)); dots[k].setAttribute("visibility", "visible");
+      const r = el("div", "r"), key = el("i"); key.style.borderColor = s.color;
+      r.append(key, el("b", null, (opts.tipval || fmt)(v)), el("span", null, s.name)); tip.appendChild(r);
+    });
+    tip.hidden = false;
+    const bw = box.clientWidth, px = X(at) / W * bw, tw = tip.offsetWidth;
+    tip.style.transform = `translate(${Math.max(0, Math.min(bw - tw, px + (px > bw / 2 ? -tw - 12 : 12)))}px, ${box.querySelector(".legend") ? 34 : 6}px)`;
+  }
+  function hide() { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); tip.hidden = true; }
+  svg.addEventListener("pointermove", (e) => { const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W; show(Math.round((x - padL) / (W - padL - padR) * (n - 1))); });
+  svg.addEventListener("pointerleave", hide);
+  svg.addEventListener("focus", () => show(at)); svg.addEventListener("blur", hide);
+  svg.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") { show(at - 1); e.preventDefault(); } else if (e.key === "ArrowRight") { show(at + 1); e.preventDefault(); } });
+  box.append(svg, tip);
+
+  if (opts.table) {      // the same numbers without hovering
+    const d = el("details", "table"), sum = el("summary", null, "Show the last 10 values as a table"), wrap = el("div", "tablewrap"), t = el("table"), hr = el("tr");
+    hr.appendChild(el("th", null, "Date")); series.forEach((s) => hr.appendChild(el("th", "r", s.name))); t.appendChild(hr);
+    for (let i = n - 1; i >= Math.max(0, n - 10); i--) { const tr = el("tr"); tr.appendChild(el("td", null, (opts.tipfmt || opts.xfmt || dayY)(labels[i]))); series.forEach((s) => tr.appendChild(el("td", "r num", s.rows[i][1] == null ? "–" : (opts.tipval || fmt)(s.rows[i][1])))); t.appendChild(tr); }
+    wrap.appendChild(t); d.append(sum, wrap); box.appendChild(d);
+  }
+  return box;
+}
+
+/* ---------- pieces ---------- */
+function panel(title, sub) { const p = el("section", "panel"); if (title) p.appendChild(el("h2", null, title)); if (sub) p.appendChild(el("p", "sub", sub)); return p; }
+function stat(label, value, lines) {
+  const s = el("div", "stat");
+  s.append(el("span", "mono", label), el("strong", null, value));
+  (lines || []).forEach((l) => { const sm = el("small"); if (l instanceof Node) sm.appendChild(l); else sm.textContent = l; s.appendChild(sm); });
+  return s;
+}
+/* Indexes that stopped being published are dropped: only series with a reading in the last five months are kept. */
+function freshPpi() {
+  const out = {}, cut = new Date(Date.now() - 150 * 864e5).toISOString().slice(0, 7);
+  Object.entries(state.data.ppi || {}).forEach(([id, v]) => { if (v.rows.length && v.rows[v.rows.length - 1][0] >= cut) out[id] = v; });
+  return out;
+}
+function ppiRows(metal) { return Object.entries(freshPpi()).filter(([, v]) => v.metal === metal).map(([id, v]) => Object.assign({ id }, v)); }
+function equities(metal) { return Object.entries(state.data.equities || {}).filter(([, v]) => v.metal === metal || v.metal === "all").map(([sym, v]) => Object.assign({ sym }, v)); }
+
+function sharesPanel(metal) {
+  const list = equities(metal), p = panel("Shares and funds tied to " + (metal === "aluminum" ? "aluminium" : metal), "Daily closing prices in US dollars. Shares follow the metal but also each company's own fortunes.");
+  if (!list.length) { p.appendChild(el("p", "sub", "No share prices available.")); return p; }
+  const wrap = el("div", "tablewrap"), t = el("table"), hr = el("tr");
+  [["Name", ""], ["Close", "r"], ["1 day", "r"], ["1 month", "r"], ["This year", "r"], ["3 months", "r"]].forEach(([h, c]) => hr.appendChild(el("th", c, h)));
+  t.appendChild(hr);
+  list.forEach((e) => {
+    const tr = el("tr"), nm = el("td"); nm.append(e.name + " ", el("span", "num", "(" + e.sym + ")")); nm.appendChild(el("small", null, e.kind + " · " + e.what));
+    const cell = (v) => { const td = el("td", "r num"); td.appendChild(delta(v, pct(v))); return td; };
+    const sp = el("td", "r"); sp.appendChild(spark(e.rows.slice(-63)));
+    tr.append(nm, el("td", "r num", usd(last(e.rows)[1], 2)), cell(change(e.rows, 1)), cell(change(e.rows, 21)), cell(ytd(e.rows)), sp);
+    t.appendChild(tr);
+  });
+  wrap.appendChild(t); p.appendChild(wrap);
+  p.appendChild(el("p", "sub", "Closes for " + dayY(last(list[0].rows)[0]) + ".")).style.margin = "12px 0 0";
+  return p;
+}
+function ppiPanel(metal, title) {
+  const list = ppiRows(metal), p = panel(title || "US producer price indexes", "Monthly index numbers from the Bureau of Labor Statistics (1982 = 100 for most). They show what US producers are charging, with about a month's delay. The latest months are preliminary.");
+  if (!list.length) { p.appendChild(el("p", "sub", "No index data available.")); return p; }
+  const grid = el("div", "minis");
+  list.forEach((s) => {
+    const m = el("div", "mini"), l = last(s.rows), v = el("div", "v");
+    m.appendChild(el("h3", null, s.name));
+    v.append(el("b", null, l[1].toFixed(1)), " in " + month(l[0]) + " · ", delta(change(s.rows, 1), pct(change(s.rows, 1)) + " on the month"), " · ", delta(change(s.rows, 12), pct(change(s.rows, 12)) + " on the year"));
+    m.append(v, lineChart({ series: [{ name: s.name, color: "var(--s1)", rows: s.rows.slice(-36) }], height: 200, fmt: (x) => x.toFixed(0), tipval: (x) => x.toFixed(1), xfmt: month, label: s.name + " index, last three years" }));
+    grid.appendChild(m);
+  });
+  p.appendChild(grid);
+  return p;
+}
+function newsPanel(metal) {
+  const items = (state.data.news && state.data.news[metal]) || [], p = panel("News", "Recent headlines. Each link opens the publisher's page in a new tab.");
+  if (!items.length) { p.appendChild(el("p", "sub", "No recent headlines found.")); return p; }
+  const ul = el("ul", "news");
+  items.slice(0, state.newsShown).forEach((n) => {
+    const li = el("li"), a = el("a", null, n.t);
+    a.href = /^https?:\/\//.test(n.u) ? n.u : "#"; a.target = "_blank"; a.rel = "noopener noreferrer";
+    li.append(a, el("small", null, (n.s ? n.s + " · " : "") + ago(n.d)));
+    ul.appendChild(li);
+  });
+  p.appendChild(ul);
+  if (items.length > state.newsShown) { const b = el("button", "btn more", "Show " + (items.length - state.newsShown) + " more"); b.type = "button"; b.addEventListener("click", () => { state.newsShown = 99; render(); }); p.appendChild(b); }
+  return p;
+}
+function notes(title, points) {
+  const d = el("details", "panel notes"), ul = el("ul");
+  d.appendChild(el("summary", null, title));
+  points.forEach(([head, text]) => { const li = el("li"); li.append(el("b", null, head + " "), text); ul.appendChild(li); });
+  d.appendChild(ul);
+  return d;
+}
+
+/* ---------- LME metals (copper, aluminium) ---------- */
+function lmeView(metal) {
+  const rows = state.data.lme[metal] || [], view = $("view"), name = metal === "aluminum" ? "aluminium" : "copper";
+  if (!rows.length) { view.appendChild(el("div", "state", "No exchange prices are available right now.")); return; }
+  const cash = rows.map((r) => [r[0], r[1]]), m3 = rows.map((r) => [r[0], r[2]]), stock = rows.map((r) => [r[0], r[3]]).filter((r) => r[1] != null), spread = rows.filter((r) => r[2] != null).map((r) => [r[0], +(r[1] - r[2]).toFixed(2)]);
+  const l = rows[rows.length - 1], sp = l[2] != null ? l[1] - l[2] : null;
+  const d1 = change(cash, 1), d21 = change(cash, 21), dy = ytd(cash), st21 = change(stock, 21);
+  const year = cash.filter((r) => r[0].startsWith(l[0].slice(0, 4))).map((r) => r[1]), yLo = Math.min(...year), yHi = Math.max(...year);
+
+  // the read: plain-language summary written from the numbers
+  const read = el("section", "panel read"), p1 = el("p"), p2 = el("p");
+  p1.append("LME " + name + " settled at ", el("b", null, usd(l[1]) + " a tonne"), " (" + usd(l[1] / LB, 2) + " a pound) on " + day(l[0]) + ", " + (d1 >= 0 ? "up " : "down ") + pct(Math.abs(d1)).replace("+", "") + " on the day and " + (d21 >= 0 ? "up " : "down ") + pct(Math.abs(d21)).replace("+", "") + " over the past month. ");
+  p1.append("That is " + pct(1 - l[1] / yHi).replace("+", "") + " below this year's high of " + usd(yHi) + " and " + pct(l[1] / yLo - 1).replace("+", "") + " above the low of " + usd(yLo) + ".");
+  if (sp != null) {
+    const big = Math.abs(sp) / l[1] > 0.01;
+    p2.append("The cash price is ", el("b", null, usd(Math.abs(sp), 2) + (sp >= 0 ? " above" : " below")), " the 3-month price. ",
+      sp >= 0 ? "That is a backwardation: buyers are paying extra for metal now, which usually goes with tight nearby supply" + (big ? ", and this one is wide" : "") + ". "
+              : "That is a contango, the normal shape when metal is easy to get for prompt delivery. ");
+  }
+  if (last(stock)) p2.append("LME warehouse stocks are ", el("b", null, n0(last(stock)[1]) + " tonnes"), st21 == null ? "." : ", " + (st21 >= 0 ? "up " : "down ") + pct(Math.abs(st21)).replace("+", "") + " in a month" + (st21 > 0.05 ? ", a sign of metal arriving faster than it is being used." : st21 < -0.05 ? ", a sign of metal being drawn down." : "."));
+  read.append(p1, p2);
+  view.appendChild(read);
+
+  const stats = el("div", "stats");
+  stats.append(
+    stat("LME cash", usd(l[1]), [usd(l[1] / LB, 2) + " per pound", delta(d1, pct(d1) + " on the day")]),
+    stat("3-month", usd(l[2]), ["per tonne", delta(change(m3, 1), pct(change(m3, 1)) + " on the day")]),
+    stat(sp >= 0 ? "Backwardation" : "Contango", usd(Math.abs(sp), 2), ["cash " + (sp >= 0 ? "above" : "below") + " 3-month", pct(Math.abs(sp) / l[1], 2).replace("+", "") + " of the price"]),
+    stat("LME stocks", n0(last(stock) && last(stock)[1]) + " t", ["in exchange warehouses", delta(st21, pct(st21) + " in a month")]),
+    stat("This year", pct(dy), [usd(yLo) + " low", usd(yHi) + " high"])
+  );
+  if (metal === "copper" && state.data.lme.aluminum && state.data.lme.aluminum.length) { const al = last(state.data.lme.aluminum); stats.appendChild(stat("Copper ÷ aluminium", (l[1] / al[1]).toFixed(2) + "×", ["price ratio", "higher favours switching to aluminium"])); }
+  view.appendChild(stats);
+
+  const main = panel("LME " + name + ": cash and 3-month", "US dollars per tonne, daily official settlement.");
+  main.appendChild(lineChart({ series: [{ name: "Cash", color: "var(--s1)", rows: slice(cash) }, { name: "3-month", color: "var(--s2)", rows: slice(m3) }], fmt: (v) => usd(v), tipval: (v) => usd(v, 2), table: true, label: "LME " + name + " cash and 3-month prices" }));
+  view.appendChild(main);
+
+  const two = el("div", "two"), a = panel("Cash minus 3-month", "Dollars per tonne. Above zero is backwardation, below is contango."), b = panel("LME warehouse stocks", "Tonnes held in exchange-approved warehouses.");
+  a.appendChild(lineChart({ series: [{ name: "Cash minus 3-month", color: "var(--s1)", rows: slice(spread) }], zero: true, height: 230, fmt: (v) => usd(v), tipval: (v) => usd(v, 2), label: "Cash minus 3-month spread" }));
+  b.appendChild(lineChart({ series: [{ name: "Stocks", color: "var(--s1)", rows: slice(stock) }], height: 230, fmt: (v) => (v / 1000).toFixed(0) + "k", tipval: (v) => n0(v) + " t", label: "LME warehouse stocks" }));
+  two.append(a, b); view.appendChild(two);
+
+  view.append(sharesPanel(metal), ppiPanel(metal, "US producer prices for " + name + " products"), newsPanel(metal));
+  view.appendChild(notes("How to read the " + name + " market", metal === "copper" ? [
+    ["LME cash settlement", "is the world reference price for physical copper, in US dollars per tonne. Most supply contracts are priced off it."],
+    ["The 3-month price", "is the most actively traded LME contract. The gap between cash and 3-month shows how urgently metal is wanted today."],
+    ["Warehouse stocks", "are only the metal sitting in exchange warehouses, not all the copper in the world. Falling stocks with a backwardation is the classic tight-market signal."],
+    ["US prices can differ.", "Copper in the US trades on COMEX in cents per pound, and tariffs or shipping can open a gap to London. That price has no free feed, so it isn't shown here; the copper futures fund (CPER) in the table moves with it."],
+    ["Copper against aluminium.", "When copper costs much more than about 3.5 to 4 times aluminium, cable and heat-exchanger makers have more reason to switch."]
+  ] : [
+    ["LME cash settlement", "is the base price for primary aluminium worldwide, in US dollars per tonne."],
+    ["Regional premiums are on top.", "A US buyer pays the LME price plus the Midwest premium, which covers freight, tariffs and local tightness and can be a large share of the delivered cost. Premiums have no free feed and aren't shown here."],
+    ["Energy is the big cost.", "Smelting takes huge amounts of electricity, so power prices and smelter cuts or restarts move the market."],
+    ["Stocks can be misleading.", "LME aluminium stocks swing with warehouse financing deals and with where Russian metal can be delivered, so read them alongside the spread."],
+    ["The 3-month price", "is the main traded contract. A wide backwardation means prompt metal is scarce on the exchange even if total supply is ample."]
+  ]));
+}
+
+/* ---------- steel ---------- */
+function steelView() {
+  const view = $("view"), ppi = freshPpi(), mill = ppi.WPU1017, hot = ppi.WPU101703, scrap = ppi.WPU1012, cold = ppi.WPU101707, slx = state.data.equities.SLX;
+  const read = el("section", "panel read"), p1 = el("p"), p2 = el("p");
+  if (mill) {
+    const l = last(mill.rows), mo = change(mill.rows, 1), yr = change(mill.rows, 12);
+    p1.append("The US producer price index for steel mill products was ", el("b", null, l[1].toFixed(1)), " in " + month(l[0]) + ", " + (mo >= 0 ? "up " : "down ") + pct(Math.abs(mo)).replace("+", "") + " on the month and " + (yr >= 0 ? "up " : "down ") + pct(Math.abs(yr)).replace("+", "") + " on the year. ");
+  }
+  if (scrap) { const mo = change(scrap.rows, 1), yr = change(scrap.rows, 12); p1.append("Scrap, the main raw material for US electric-arc mills, was " + (mo >= 0 ? "up " : "down ") + pct(Math.abs(mo)).replace("+", "") + " on the month and " + (yr >= 0 ? "up " : "down ") + pct(Math.abs(yr)).replace("+", "") + " on the year."); }
+  if (mill && scrap) {
+    const gap = change(mill.rows, 12) - change(scrap.rows, 12);
+    p2.append(gap > 0.03 ? "Steel prices have risen faster than scrap over the year, which widens mill margins. " : gap < -0.03 ? "Scrap has risen faster than steel over the year, which squeezes mill margins. " : "Steel and scrap have moved roughly together over the year, so mill margins look steady. ");
+  }
+  if (slx) p2.append("Steel shares, measured by the VanEck Steel fund, are " + (change(slx.rows, 21) >= 0 ? "up " : "down ") + pct(Math.abs(change(slx.rows, 21))).replace("+", "") + " in a month and " + pct(ytd(slx.rows)) + " this year.");
+  read.append(p1, p2);
+  view.appendChild(read);
+
+  const stats = el("div", "stats");
+  [[mill, "Steel mill products"], [hot, "Hot rolled sheet"], [cold, "Cold rolled sheet"], [scrap, "Steel scrap"]].forEach(([s, label]) => {
+    if (!s) return;
+    const l = last(s.rows);
+    stats.appendChild(stat(label, l[1].toFixed(1), ["index, " + month(l[0]), delta(change(s.rows, 1), pct(change(s.rows, 1)) + " on the month"), delta(change(s.rows, 12), pct(change(s.rows, 12)) + " on the year")]));
+  });
+  if (slx) stats.appendChild(stat("Steel shares (SLX)", usd(last(slx.rows)[1], 2), ["daily close", delta(change(slx.rows, 1), pct(change(slx.rows, 1)) + " on the day")]));
+  view.appendChild(stats);
+
+  if (slx) {
+    const p = panel("Steel shares: VanEck Steel fund (SLX)", "US dollars, daily close. The nearest free daily gauge of how the market sees steel.");
+    p.appendChild(lineChart({ series: [{ name: "SLX", color: "var(--s1)", rows: slice(slx.rows) }], fmt: (v) => usd(v), tipval: (v) => usd(v, 2), table: true, label: "VanEck Steel fund daily close" }));
+    view.appendChild(p);
+  }
+  view.append(ppiPanel("steel", "US producer prices for steel"), sharesPanel("steel"), newsPanel("steel"));
+  view.appendChild(notes("How to read the steel market", [
+    ["There is no single world steel price.", "Steel is priced by region and product. The US benchmark is Midwest hot-rolled coil, in dollars per short ton; its daily price comes from paid services and isn't shown here."],
+    ["Producer price indexes", "are the best free monthly gauge. They are index numbers, not dollars, so read the change, not the level. Cold rolled sheet and steel mill products follow the coil market most closely."],
+    ["Scrap leads.", "About seven-tenths of US steel is made by melting scrap in electric-arc furnaces, so scrap prices feed into mill costs and often turn before steel does."],
+    ["Iron ore and coking coal", "drive costs for blast-furnace steel, which dominates in China and sets the tone for world export prices."],
+    ["Tariffs and imports", "matter more for steel than for most metals. US prices can sit far above world prices when import duties are high, which is why trade headlines move steel shares."]
+  ]));
+}
+
+/* ---------- headline tiles and filters ---------- */
+function renderHeads() {
+  const box = $("heads"), d = state.data;
+  box.textContent = "";
+  METALS.forEach(([id, label]) => {
+    const b = el("button", "head"); b.type = "button"; b.setAttribute("aria-pressed", String(id === state.metal));
+    b.appendChild(el("span", "mono", label));
+    const left = el("div");
+    if (id !== "steel" && d.lme[id] && d.lme[id].length) {
+      const rows = d.lme[id].map((r) => [r[0], r[1]]), l = last(rows), sm = el("small");
+      sm.append(delta(change(rows, 1), pct(change(rows, 1)) + " day"), " · ", delta(change(rows, 21), pct(change(rows, 21)) + " month"));
+      left.append(el("strong", null, usd(l[1])), el("small", null, "LME cash per tonne, " + day(l[0])), sm);
+      b.append(left, spark(rows.slice(-63)));
+    } else if (id === "steel" && freshPpi().WPU1017) {
+      const rows = freshPpi().WPU1017.rows, l = last(rows), sm = el("small");
+      sm.append(delta(change(rows, 1), pct(change(rows, 1)) + " month"), " · ", delta(change(rows, 12), pct(change(rows, 12)) + " year"));
+      left.append(el("strong", null, l[1].toFixed(1)), el("small", null, "US mill products index, " + month(l[0])), sm);
+      b.append(left, spark(rows.slice(-24)));
+    } else left.append(el("strong", null, "–"), el("small", null, "No data"));
+    if (!b.contains(left)) b.appendChild(left);
+    b.addEventListener("click", () => setMetal(id));
+    box.appendChild(b);
+  });
+}
+function setMetal(id) { state.metal = id; state.newsShown = 12; try { history.replaceState(null, "", "#" + id); } catch (e) {} render(); }
+function renderFilters() {
+  const tabs = $("metalTabs"), ranges = $("ranges");
+  tabs.textContent = ""; ranges.textContent = "";
+  METALS.forEach(([id, label]) => { const b = el("button", "btn", label); b.type = "button"; b.setAttribute("aria-pressed", String(id === state.metal)); b.addEventListener("click", () => setMetal(id)); tabs.appendChild(b); });
+  RANGES.forEach(([id]) => { const b = el("button", "btn mono", id); b.type = "button"; b.setAttribute("aria-pressed", String(id === state.range)); b.addEventListener("click", () => { state.range = id; render(); }); ranges.appendChild(b); });
+}
+function render() {
+  renderHeads(); renderFilters();
+  $("view").textContent = "";
+  if (state.metal === "steel") steelView(); else lmeView(state.metal);
+}
+
+fetch("../../data/metals.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => {
+  state.data = d;
+  $("stamp").textContent = "Data collected " + ago(d.updated);
+  render();
+}).catch(() => { $("view").textContent = ""; $("view").appendChild(el("div", "state", "The market data couldn't be loaded. Try refreshing in a moment.")); });
+</script>
+</body>
+</html>
