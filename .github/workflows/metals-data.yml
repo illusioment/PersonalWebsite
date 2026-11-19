@@ -1,0 +1,39 @@
+name: Update metals data
+
+# Runs four times a day, when the script changes, or by hand from the Actions tab.
+on:
+  schedule:
+    - cron: "41 1,7,13,19 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/metals.mjs
+      - .github/workflows/metals-data.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: metals-data
+  cancel-in-progress: false
+
+jobs:
+  metals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/metals.mjs
+      - name: Save the new data
+        run: |
+          git config user.name "market-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/metals.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update metals data"
+          git pull --rebase
+          git push
