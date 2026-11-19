@@ -9,39 +9,30 @@ function probe(label, url, show = 200, extra = []) {
   console.log(`${code} ${label} len=${body.length} :: ${body.slice(0, show).replace(/\s+/g, " ")}`);
   return body;
 }
-for (const s of ["HG=F", "ALI=F", "HRC=F", "TIO=F", "SLX"]) {
-  const t = probe("yahoo " + s, `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(s)}?range=5d&interval=1d`, 50);
-  try { const m = JSON.parse(t).chart.result[0].meta; console.log("   meta", JSON.stringify({ sym: m.symbol, cur: m.currency, name: m.shortName || m.longName, px: m.regularMarketPrice, exch: m.fullExchangeName })); } catch (e) {}
-}
-for (const id of ["PCOPPUSDM", "PALUMUSDM", "PIORECRUSDM", "WPU101", "WPU1017", "WPU101707", "WPU102502", "PCU331110331110", "PCU331313331313", "PCU331420331420", "WPU1012", "DTWEXBGS"]) {
-  const t = probe("fred " + id, `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${id}&cosd=2024-01-01`, 50);
-  if (t) console.log("   tail", t.trim().split("\n").slice(-2).join(" | ").slice(0, 120));
-}
 for (const [l, u] of [
-  ["dbnomics copper", "https://api.db.nomics.world/v22/series/IMF/PCPS/M.W00.PCOPP.USD?observations=1"],
-  ["dbnomics alum", "https://api.db.nomics.world/v22/series/IMF/PCPS/M.W00.PALUM.USD?observations=1"],
-  ["dbnomics search", "https://api.db.nomics.world/v22/search?q=copper%20LME%20price&limit=8"],
-  ["dbnomics steel", "https://api.db.nomics.world/v22/search?q=hot%20rolled%20steel%20price&limit=8"],
-  ["nasdaq HG", "https://api.nasdaq.com/api/quote/HG%3ANMX/info?assetclass=commodities"],
-  ["nasdaq HG chart", "https://api.nasdaq.com/api/quote/HG%3ANMX/chart?assetclass=commodities&fromdate=2026-10-01&todate=2026-11-19"],
-  ["nasdaq ALI", "https://api.nasdaq.com/api/quote/ALI%3ACMX/info?assetclass=commodities"],
-  ["nasdaq FCX", "https://api.nasdaq.com/api/quote/FCX/info?assetclass=stocks"],
-  ["nasdaq FCX hist", "https://api.nasdaq.com/api/quote/FCX/historical?assetclass=stocks&fromdate=2026-10-01&todate=2026-11-19&limit=40"],
-  ["nasdaq SLX hist", "https://api.nasdaq.com/api/quote/SLX/historical?assetclass=etf&fromdate=2026-10-01&todate=2026-11-19&limit=40"],
-  ["westmetall cu", "https://www.westmetall.com/en/markdaten.php?action=table&field=LME_Cu_cash"],
-  ["imf api", "https://api.imf.org/external/sdmx/2.1/data/IMF.RES,PCPS/M.G001.PCOPP.USD?startPeriod=2026-01"],
-  ["worldbank api", "https://api.worldbank.org/v2/sources?format=json&per_page=5"]
-]) probe(l, u, 420);
-for (const [l, u] of [
-  ["gnews copper", "https://news.google.com/rss/search?q=copper+price+OR+%22copper+market%22+when:7d&hl=en-US&gl=US&ceid=US:en"],
-  ["gnews steel", "https://news.google.com/rss/search?q=%22steel+prices%22+OR+%22steel+market%22+when:7d&hl=en-US&gl=US&ceid=US:en"],
-  ["bing copper", "https://www.bing.com/news/search?q=copper+price&format=rss"],
-  ["mining.com", "https://www.mining.com/feed/"], ["mining copper", "https://www.mining.com/tag/copper/feed/"],
-  ["kitco", "https://www.kitco.com/rss/"], ["alcircle", "https://www.alcircle.com/rss/news"], ["gmk", "https://gmk.center/en/feed/"],
-  ["steelorbis", "https://www.steelorbis.com/rss/steel-news.xml"], ["recyclingtoday", "https://www.recyclingtoday.com/rss/"], ["agmetalminer", "https://agmetalminer.com/feed/"],
-  ["aluminium-journal", "https://www.aluminiumtoday.com/rss"], ["steeltimes", "https://www.steeltimesint.com/rss"], ["eurometal", "https://eurometal.net/feed/"], ["mining-tech", "https://www.mining-technology.com/feed/"]
+  ["nasdaq c1", "https://api.nasdaq.com/api/quote/HG%3ACMX/info?assetclass=commodities"],
+  ["nasdaq c2", "https://api.nasdaq.com/api/quote/HG/info?assetclass=commodities"],
+  ["nasdaq c3", "https://api.nasdaq.com/api/quote/HG%3ACMX/info?assetclass=futures"],
+  ["nasdaq c4", "https://api.nasdaq.com/api/quote/HG%3ACMX/historical?assetclass=commodities&fromdate=2026-10-01&todate=2026-11-19&limit=40"],
+  ["nasdaq c5", "https://api.nasdaq.com/api/quote/watchlist?symbol=hg%3Acmx%7ccommodities&symbol=ali%3Acmx%7ccommodities&symbol=hrc%3Acmx%7ccommodities"],
+  ["nasdaq CPER", "https://api.nasdaq.com/api/quote/CPER/historical?assetclass=etf&fromdate=2026-11-01&todate=2026-11-19&limit=5"],
+  ["bls v2", "https://api.bls.gov/publicAPI/v2/timeseries/data/WPU101?startyear=2024&endyear=2026"],
+  ["bls v1 multi", "https://api.bls.gov/publicAPI/v1/timeseries/data/WPU1017"],
+  ["dbn iron", "https://api.db.nomics.world/v22/series/IMF/PCPS/M.W00.PIORECR.USD?observations=1"],
+  ["dbn wb search", "https://api.db.nomics.world/v22/search?q=pink%20sheet%20commodity%20prices&limit=6"],
+  ["dbn providers steel", "https://api.db.nomics.world/v22/series?q=steel%20hot%20rolled%20price&limit=8&observations=0"],
+  ["dbn copper daily", "https://api.db.nomics.world/v22/series?q=copper%20daily%20price%20LME&limit=8&observations=0"]
 ]) {
-  const t = probe(l, u, 90);
-  const items = [...t.matchAll(/<item>[\s\S]*?<title>([\s\S]*?)<\/title>[\s\S]*?<\/item>/g)].slice(0, 3).map((m) => m[1].replace(/<!\[CDATA\[|\]\]>/g, "").slice(0, 80));
-  if (items.length) console.log("   items", t.split("<item>").length - 1, JSON.stringify(items));
+  const t = probe(l, u, 700);
+  if (l.startsWith("dbn iron")) { try { const d = JSON.parse(t).series.docs[0]; console.log("   dbn", d.series_name, d.period.slice(-3), d.value.slice(-3)); } catch (e) { console.log("   dbn parse fail"); } }
+  if (l.startsWith("dbn") && l !== "dbn iron") { try { const j = JSON.parse(t); const docs = (j.series && j.series.docs) || (j.results && j.results.docs) || []; docs.forEach((d) => console.log("   doc", (d.provider_code || "") + "/" + (d.dataset_code || d.code || "") + "/" + (d.series_code || ""), "|", (d.series_name || d.name || "").slice(0, 110))); } catch (e) {} }
+}
+for (const f of ["LME_Cu_cash", "LME_Al_cash"]) {
+  const t = probe("westmetall " + f, "https://www.westmetall.com/en/markdaten.php?action=table&field=" + f, 0);
+  const text = t.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+  const i = text.search(/date/i);
+  console.log("   table", text.slice(Math.max(0, i - 80), i + 700));
+  console.log("   legal", (text.match(/.{0,160}(copyright|©|without guarantee|liability|permission|reproduc).{0,200}/gi) || []).slice(0, 4).join(" || "));
+  const rows = [...t.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].slice(0, 6).map((m) => m[1].replace(/<[^>]+>/g, "|").replace(/\s+/g, " ").slice(0, 160));
+  console.log("   rows", JSON.stringify(rows));
 }
