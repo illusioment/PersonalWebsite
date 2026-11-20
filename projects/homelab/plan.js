@@ -120,7 +120,7 @@ window.PLAN = {
     { id: "p5", name: "Host this website at home", goal: "The hub served from your own server.", steps: [
       ["p5-web", "Run a web server", "A Caddy container on the apps machine serving a copy of the PersonalWebsite repository."],
       ["p5-pull", "Update it from GitHub automatically", "A small scheduled job pulls the latest changes every few minutes, so the way we work stays the same: I push, your server picks it up."],
-      ["p5-jobs", "Move the data jobs home", "The card and metals scripts run on a schedule on your server instead of on GitHub's."],
+      ["p5-jobs", "Move the data jobs home", "The data scripts run on a schedule on your server instead of on GitHub's."],
       ["p5-domain", "Buy a domain name", "About $12 a year. It also gives you proper names and certificates for internal services."],
       ["p5-tunnel", "Publish through a tunnel", "Cloudflare Tunnel makes an outbound connection from your server, so visitors reach the site without your home address being exposed or any port being opened. Put the web server in its own zone so it can't reach your files."],
       ["p5-private", "Move the private corner home", "The page for the two of you can sit behind Tailscale instead of Netlify, with no password page on the public internet at all."],

@@ -30,7 +30,6 @@ window.HUB = {
   apps: [
     { name: "Weekly Menu", desc: "Pick this week's dinners, see the nutrition, and get one shopping list.", category: "corner", url: "corner/menu/", status: "new" },
     { name: "Tank Arena", desc: "Drive a tank through ricochet-shell missions, or build one from a points budget and send it into the league.", category: "games", url: "games/tank-arena/", status: "new" },
-    { name: "Metals Desk", desc: "A market monitor for copper, aluminium and steel: prices, signals, analytics and a news wire.", category: "tools", url: "tools/metals/", status: "live data" },
     { name: "Card Market", desc: "Pokémon card prices, market movers and price trends.", category: "cards", url: "tools/card-market/", status: "live data" },
     { name: "Card Maker", desc: "Design a custom trading card with your own art, moves and foil finish, then download it.", category: "cards", url: "cards/card-maker/", status: "new" },
 
