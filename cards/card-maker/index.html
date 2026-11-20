@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:ital,wght@0,300;0,400;0,600;1,300&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Card Maker, in the hub's palette. Layout: the card preview on the left (it is
+   one canvas, so what you see is exactly what downloads), the form on the right,
+   saved cards underneath. The card frame is this site's own design. */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.5;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%); background-attachment: fixed; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px 56px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.top { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+.lede { color: var(--muted); max-width: 62ch; margin: 0 0 28px; }
+
+.maker { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 32px; align-items: start; }
+.stage { position: sticky; top: 16px; }
+.cardwrap { position: relative; border-radius: 5.1% / 3.65%; overflow: hidden; box-shadow: 0 18px 50px rgba(0, 0, 0, .55); touch-action: none; cursor: grab; }
+.cardwrap.drag { cursor: grabbing; }
+.cardwrap canvas { display: block; width: 100%; height: auto; }
+.cardwrap::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, .28), transparent 45%); mix-blend-mode: soft-light; }
+.cardwrap:hover::after { opacity: 1; }
+.hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; text-align: center; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; justify-content: center; }
+.primary { background: var(--sun); color: #1A1400; font-weight: 600; border: 0; border-radius: 999px; padding: 11px 24px; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 10px 18px; color: var(--text); }
+.ghost:hover { border-color: var(--leaf); color: var(--leaf); }
+.msg { min-height: 1.5em; margin: 10px 0 0; text-align: center; font-size: 13.5px; color: var(--leaf); }
+
+fieldset { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); padding: 16px 18px 18px; margin: 0 0 16px; min-width: 0; }
+legend { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--sun); padding: 0 8px; }
+.row { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom: 12px; }
+.row:last-child { margin-bottom: 0; }
+.row .wide { grid-column: span 2; }
+label { display: block; font-size: 13px; color: var(--muted); }
+label > input, label > select, label > textarea { display: block; width: 100%; margin-top: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; color: var(--text); font-size: 15px; }
+textarea { resize: vertical; min-height: 62px; }
+input[type="range"] { padding: 0; accent-color: var(--sun); border: 0; background: none; }
+.elements { display: flex; flex-wrap: wrap; gap: 8px; }
+.elements button { display: inline-flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px 5px 6px; font-size: 13.5px; }
+.elements button[aria-pressed="true"] { border-color: var(--sun); color: var(--sun); }
+.elements canvas { width: 24px; height: 24px; }
+.check { display: flex; align-items: center; gap: 8px; color: var(--text); font-size: 14.5px; }
+.check input { width: 18px; height: 18px; accent-color: var(--sun); margin: 0; }
+.file { display: inline-block; }
+.file input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.file span { display: inline-block; background: var(--sun); color: #1A1400; font-weight: 600; border-radius: 999px; padding: 10px 20px; cursor: pointer; font-size: 15px; }
+.file input:focus-visible + span { outline: 2px solid var(--text); outline-offset: 2px; }
+.artrow { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.artrow label { flex: 1 1 180px; }
+.small { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 20px; margin: 40px 0 6px; }
+.saved { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 16px; margin-top: 16px; }
+.saved figure { margin: 0; }
+.saved img { display: block; width: 100%; border-radius: 6px; border: 1px solid var(--line); cursor: pointer; }
+.saved img:hover { border-color: var(--sun); }
+.saved figcaption { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 13px; margin-top: 6px; }
+.saved figcaption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved figcaption button { background: none; border: 0; color: var(--muted); padding: 0; font-size: 12.5px; }
+.saved figcaption button:hover { color: var(--down); }
+.empty { color: var(--muted); border: 1px dashed var(--line); border-radius: 14px; padding: 22px; text-align: center; margin-top: 16px; }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; max-width: 80ch; }
+@media (max-width: 860px) { .maker { grid-template-columns: minmax(0, 1fr); } .stage { position: static; max-width: 380px; margin: 0 auto; } .wrap { padding: 0 16px 48px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="mono" href="../../">← Back to hub</a></header>
+  <h1>Card Maker</h1>
+  <p class="lede">Design your own trading card: add your art, name it, give it moves, and download it as an image. Everything stays in your browser; your picture is never uploaded anywhere.</p>
+
+  <div class="maker">
+    <div class="stage">
+      <div class="cardwrap" id="cardwrap"><canvas id="card" width="750" height="1050" aria-label="Card preview"></canvas></div>
+      <p class="hint" id="hint">Drag the card to move your art. Scroll or use the slider to zoom.</p>
+      <div class="actions">
+        <button class="primary" id="download" type="button">Download image</button>
+        <button class="ghost" id="save" type="button">Save to my cards</button>
+        <button class="ghost" id="fresh" type="button">New card</button>
+      </div>
+      <p class="msg" id="msg" role="status"></p>
+    </div>
+
+    <form id="form" autocomplete="off">
+      <fieldset>
+        <legend>Art</legend>
+        <div class="artrow">
+          <label class="file"><input id="file" type="file" accept="image/*"><span>Upload image</span></label>
+          <label>Zoom <input id="zoom" type="range" min="1" max="3" step="0.01" value="1"></label>
+          <button class="ghost" id="recentre" type="button">Re-centre</button>
+        </div>
+        <p class="small">Tall pictures work best; the art fills the whole card. You can also drop an image onto the card.</p>
+      </fieldset>
+
+      <fieldset>
+        <legend>Identity</legend>
+        <div class="row">
+          <label class="wide">Name <input data-f="name" maxlength="28"></label>
+          <label>Form <input data-f="form" maxlength="16" list="forms"></label>
+          <label>HP <input data-f="hp" type="number" min="0" max="999" step="10"></label>
+        </div>
+        <datalist id="forms"><option value="Basic"><option value="Stage 1"><option value="Stage 2"><option value="Apex"><option value="Legend"></datalist>
+        <label>Element</label>
+        <div class="elements" id="elements" role="group" aria-label="Element"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Trait (optional)</legend>
+        <div class="row"><label>Trait name <input data-f="traitName" maxlength="26"></label></div>
+        <label>What it does <textarea data-f="traitText" maxlength="170"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Move 1</legend>
+        <div class="row">
+          <label class="wide">Name <input data-f="m1Name" maxlength="24"></label>
+          <label>Cost <select data-f="m1Cost"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <label>Damage <input data-f="m1Dmg" maxlength="5"></label>
+        </div>
+        <label>Effect (optional) <textarea data-f="m1Text" maxlength="170"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Move 2 (optional)</legend>
+        <div class="row">
+          <label class="wide">Name <input data-f="m2Name" maxlength="24"></label>
+          <label>Cost <select data-f="m2Cost"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+          <label>Damage <input data-f="m2Dmg" maxlength="5"></label>
+        </div>
+        <label>Effect (optional) <textarea data-f="m2Text" maxlength="170"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Finishing touches</legend>
+        <label>Flavour text <textarea data-f="flavor" maxlength="150"></textarea></label>
+        <div class="row" style="margin-top:12px">
+          <label>Artist <input data-f="artist" maxlength="26"></label>
+          <label>Card number <input data-f="number" maxlength="9"></label>
+          <label>Rarity <select data-f="rarity"><option value="0">Common</option><option value="1">Uncommon</option><option value="2">Rare</option><option value="3">Ultra rare</option></select></label>
+        </div>
+        <label class="check"><input type="checkbox" data-f="foil"> Foil finish</label>
+      </fieldset>
+    </form>
+  </div>
+
+  <h2>My cards</h2>
+  <p class="small" style="margin:0">Saved in this browser only. Click a card to edit it again.</p>
+  <div id="saved"></div>
+
+  <footer>Cards made here use this site's own frame and symbols. They are for fun and are not official cards from any game or publisher. Only use pictures you made or have the right to use.</footer>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const W = 750, H = 1050, R = 38, canvas = $("card"), ctx = canvas.getContext("2d");
+const DISPLAY = '"Unbounded", "Trebuchet MS", sans-serif', BODY = '"Sora", "Segoe UI", system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, Menlo, monospace';
+const KEY = "card-maker-cards";
+
+/* Elements: [id, label, main colour, light colour, deep colour]. Glyphs are drawn below. */
+const ELEMENTS = [
+  ["ember", "Ember", "#E8622C", "#FFC38A", "#3A1206"], ["tide", "Tide", "#2F8FD6", "#A9DEFF", "#06203A"], ["grove", "Grove", "#4FA84A", "#C4F0A6", "#0C2A10"],
+  ["volt", "Volt", "#E3B21C", "#FFF0A3", "#3A2C02"], ["stone", "Stone", "#A9805A", "#EBD3B5", "#2A1B0E"], ["shade", "Shade", "#7A5BC4", "#D5C4FF", "#170E33"],
+  ["frost", "Frost", "#58BFCB", "#D9FAFF", "#07282E"], ["gale", "Gale", "#8FA3B8", "#EEF4FA", "#18222C"]
+];
+const elementOf = (id) => ELEMENTS.find((e) => e[0] === id) || ELEMENTS[0];
+const BLANK = { name: "Solarwing", form: "Apex", hp: "280", element: "ember", traitName: "Dawn Guard", traitText: "Once each turn, you may shrug off 20 damage from a move that hits this card.",
+  m1Name: "Sun Flare", m1Cost: "2", m1Dmg: "90", m1Text: "", m2Name: "Meridian Dive", m2Cost: "4", m2Dmg: "240", m2Text: "This card can't use Meridian Dive on your next turn.",
+  flavor: "It rides the first light over the canopy, and the forest wakes beneath it.", artist: "You", number: "001/100", rarity: "3", foil: true };
+const state = { f: { ...BLANK }, art: null, artData: null, zoom: 1, ox: 0, oy: 0, editing: null };
+
+/* ---------- drawing helpers ---------- */
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+function wrap(c, text, maxW) {
+  const out = []; let line = "";
+  String(text).split(/\s+/).filter(Boolean).forEach((w) => { const t = line ? line + " " + w : w; if (c.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; });
+  if (line) out.push(line); return out;
+}
+function fit(c, text, weight, size, family, maxW, min) { do { c.font = weight + " " + size + "px " + family; if (c.measureText(text).width <= maxW) break; size -= 2; } while (size > min); return size; }
+
+/* A gem: coloured disc with a simple white glyph. All shapes are this site's own. */
+function gem(c, id, x, y, r) {
+  const e = elementOf(id), g = c.createRadialGradient(x - r * .35, y - r * .4, r * .1, x, y, r);
+  g.addColorStop(0, e[3]); g.addColorStop(.55, e[2]); g.addColorStop(1, e[4]);
+  c.save(); c.beginPath(); c.arc(x, y, r, 0, 7); c.fillStyle = g; c.fill(); c.lineWidth = Math.max(1, r * .09); c.strokeStyle = "rgba(255,255,255,.75)"; c.stroke();
+  c.translate(x, y); c.scale(r, r); c.fillStyle = c.strokeStyle = "#fff"; c.lineWidth = .14; c.lineCap = c.lineJoin = "round"; c.beginPath();
+  if (id === "ember") { c.moveTo(0, -.62); c.bezierCurveTo(.5, -.1, .5, .55, 0, .58); c.bezierCurveTo(-.5, .55, -.5, -.1, 0, -.62); c.fill(); }
+  else if (id === "tide") { for (const yy of [-.25, .2]) { c.moveTo(-.55, yy); c.bezierCurveTo(-.3, yy - .3, -.1, yy + .3, .1, yy); c.bezierCurveTo(.25, yy - .25, .4, yy - .1, .55, yy); } c.stroke(); }
+  else if (id === "grove") { c.moveTo(-.5, .5); c.quadraticCurveTo(-.5, -.5, .5, -.5); c.quadraticCurveTo(.5, .5, -.5, .5); c.fill(); }
+  else if (id === "volt") { c.moveTo(.15, -.62); c.lineTo(-.4, .1); c.lineTo(0, .1); c.lineTo(-.15, .62); c.lineTo(.4, -.12); c.lineTo(0, -.12); c.closePath(); c.fill(); }
+  else if (id === "stone") { for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; c[i ? "lineTo" : "moveTo"](Math.cos(a) * .55, Math.sin(a) * .55); } c.closePath(); c.fill(); }
+  else if (id === "shade") { c.arc(0, 0, .56, .6, Math.PI * 2 - .6); c.quadraticCurveTo(-.25, 0, .46, .32); c.fill(); }
+  else if (id === "frost") { for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; c.moveTo(Math.cos(a) * .58, Math.sin(a) * .58); c.lineTo(-Math.cos(a) * .58, -Math.sin(a) * .58); } c.stroke(); }
+  else { for (const [yy, x1, x2] of [[-.3, -.5, .3], [0, -.3, .55], [.3, -.55, .1]]) { c.moveTo(x1, yy); c.lineTo(x2, yy); } c.stroke(); }
+  c.restore();
+}
+function rarityMark(c, level, x, y) {
+  c.save(); c.fillStyle = "#fff"; c.translate(x, y);
+  const star = (cx) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? 3.6 : 8; c[i ? "lineTo" : "moveTo"](cx + Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); c.fill(); };
+  if (level === 0) { c.beginPath(); c.arc(-6, 0, 5.5, 0, 7); c.fill(); }
+  else if (level === 1) { c.beginPath(); c.moveTo(-6, -7.5); c.lineTo(0, 0); c.lineTo(-6, 7.5); c.lineTo(-12, 0); c.closePath(); c.fill(); }
+  else if (level === 2) star(-8); else { star(-8); star(-27); }
+  c.restore();
+}
+
+/* Where the art sits: cover the card, then apply zoom and the drag offset (-1..1). */
+function artBox() {
+  const a = state.art, s = Math.max(W / a.width, H / a.height) * state.zoom, dw = a.width * s, dh = a.height * s;
+  return { dw, dh, x: (W - dw) / 2 - state.ox * (dw - W) / 2, y: (H - dh) / 2 - state.oy * (dh - H) / 2 };
+}
+
+function draw(c = ctx) {
+  const f = state.f, e = elementOf(f.element), M = 44;
+  c.clearRect(0, 0, W, H); c.save(); rr(c, 0, 0, W, H, R); c.clip();
+
+  // backdrop and art
+  const bg = c.createLinearGradient(0, 0, W, H); bg.addColorStop(0, e[2]); bg.addColorStop(1, e[4]); c.fillStyle = bg; c.fillRect(0, 0, W, H);
+  if (state.art) { const b = artBox(); c.drawImage(state.art, b.x, b.y, b.dw, b.dh); }
+  else {
+    const glow = c.createRadialGradient(W / 2, 430, 20, W / 2, 430, 520); glow.addColorStop(0, e[3]); glow.addColorStop(.5, e[2]); glow.addColorStop(1, e[4]); c.fillStyle = glow; c.fillRect(0, 0, W, H);
+    c.globalAlpha = .22; gem(c, f.element, W / 2, 430, 190); c.globalAlpha = 1;
+  }
+
+  // foil: soft rainbow bands plus fine hatching
+  if (f.foil) {
+    c.save(); c.globalCompositeOperation = "soft-light";
+    const fg = c.createLinearGradient(0, 0, W, H * .8);
+    ["#ff7ad9", "#ffe27a", "#7affc1", "#7ad0ff", "#c69bff", "#ff7ad9", "#ffe27a", "#7affc1"].forEach((col, i, a) => fg.addColorStop(i / (a.length - 1), col));
+    c.globalAlpha = .5; c.fillStyle = fg; c.fillRect(0, 0, W, H);
+    c.globalAlpha = .16; c.strokeStyle = "#fff"; c.lineWidth = 1.5; c.beginPath(); for (let i = -H; i < W; i += 9) { c.moveTo(i, 0); c.lineTo(i + H * .55, H); } c.stroke();
+    c.restore();
+  }
+
+  // shading so text reads over any picture
+  let sh = c.createLinearGradient(0, 0, 0, 250); sh.addColorStop(0, "rgba(0,0,0,.8)"); sh.addColorStop(1, "rgba(0,0,0,0)"); c.fillStyle = sh; c.fillRect(0, 0, W, 250);
+  sh = c.createLinearGradient(0, H - 560, 0, H); sh.addColorStop(0, "rgba(0,0,0,0)"); sh.addColorStop(.55, "rgba(0,0,0,.6)"); sh.addColorStop(1, "rgba(0,0,0,.88)"); c.fillStyle = sh; c.fillRect(0, H - 560, 0 + W, 560);
+
+  // frame
+  const fr = c.createLinearGradient(0, 0, W, H); fr.addColorStop(0, e[3]); fr.addColorStop(.3, e[2]); fr.addColorStop(.55, e[3]); fr.addColorStop(.8, e[2]); fr.addColorStop(1, e[4]);
+  rr(c, 0, 0, W, H, R); c.lineWidth = 30; c.strokeStyle = fr; c.stroke();
+  rr(c, 17, 17, W - 34, H - 34, R - 14); c.lineWidth = 2; c.strokeStyle = "rgba(255,255,255,.55)"; c.stroke();
+
+  // top: form pill, name, HP and element
+  c.textBaseline = "alphabetic"; c.shadowColor = "rgba(0,0,0,.7)"; c.shadowBlur = 8;
+  const form = (f.form || "").trim().toUpperCase();
+  if (form) { c.font = "500 17px " + MONO; const pw = c.measureText(form).width + 26; c.shadowBlur = 0; rr(c, M, 42, pw, 30, 15); c.fillStyle = e[3]; c.fill(); c.fillStyle = e[4]; c.fillText(form, M + 13, 63); c.shadowBlur = 8; }
+  let right = W - M;
+  gem(c, f.element, right - 30, 98, 30); right -= 74;
+  const hp = String(f.hp || "").trim();
+  if (hp) { c.textAlign = "right"; c.fillStyle = "#fff"; c.font = "600 52px " + DISPLAY; c.fillText(hp, right, 117); right -= c.measureText(hp).width + 8; c.font = "500 18px " + MONO; c.fillText("HP", right, 117); right -= 44; }
+  c.textAlign = "left"; c.fillStyle = "#fff"; fit(c, f.name || "", 600, 50, DISPLAY, right - M, 22); c.fillText(f.name || "", M, 124);
+  c.shadowBlur = 0;
+
+  // bottom panel: measure the blocks, then draw them bottom-aligned
+  const px = 38, pw = W - 76, ix = px + 22, iw = pw - 44, blocks = [];
+  const lines = (text, font, lh) => { c.font = font; return { ls: wrap(c, text, iw), lh }; };
+  if ((f.traitName || "").trim()) { const t = lines(f.traitText || "", "300 20px " + BODY, 27); blocks.push({ kind: "trait", t, h: 44 + t.ls.length * t.lh + 6 }); }
+  [1, 2].forEach((n) => { if ((f["m" + n + "Name"] || "").trim()) { const t = lines(f["m" + n + "Text"] || "", "300 20px " + BODY, 27); blocks.push({ kind: "move", n, t, h: 50 + t.ls.length * t.lh + (t.ls.length ? 6 : 0) }); } });
+  if ((f.flavor || "").trim()) { const t = lines(f.flavor, "italic 300 18px " + BODY, 25); blocks.push({ kind: "flavor", t, h: 10 + t.ls.length * t.lh }); }
+  const gap = 16, total = blocks.reduce((a, b) => a + b.h, 0) + Math.max(0, blocks.length - 1) * gap, ph = total + 40, py = H - 74 - ph;
+  if (blocks.length) {
+    rr(c, px, py, pw, ph, 20); c.fillStyle = "rgba(5,12,10,.74)"; c.fill(); c.lineWidth = 2; c.strokeStyle = e[2]; c.stroke();
+    let y = py + 20;
+    blocks.forEach((b, i) => {
+      if (b.kind === "trait") {
+        c.font = "500 15px " + MONO; const lw = c.measureText("TRAIT").width + 20; rr(c, ix, y + 6, lw, 26, 6); c.fillStyle = e[2]; c.fill(); c.fillStyle = "#fff"; c.fillText("TRAIT", ix + 10, y + 25);
+        c.fillStyle = e[3]; fit(c, f.traitName, 600, 26, BODY, iw - lw - 14, 16); c.fillText(f.traitName, ix + lw + 14, y + 28);
+        c.fillStyle = "rgba(255,255,255,.9)"; c.font = "300 20px " + BODY; b.t.ls.forEach((l, k) => c.fillText(l, ix, y + 44 + (k + 1) * b.t.lh - 6));
+      } else if (b.kind === "move") {
+        const cost = Math.min(4, +f["m" + b.n + "Cost"] || 0), dmg = String(f["m" + b.n + "Dmg"] || "").trim(), nm = f["m" + b.n + "Name"];
+        for (let k = 0; k < cost; k++) gem(c, f.element, ix + 17 + k * 38, y + 24, 16);
+        let dw = 0; if (dmg) { c.font = "600 38px " + DISPLAY; c.textAlign = "right"; c.fillStyle = "#fff"; c.fillText(dmg, ix + iw, y + 38); dw = c.measureText(dmg).width + 16; c.textAlign = "left"; }
+        const nx = ix + (cost ? cost * 38 + 10 : 0); c.fillStyle = "#fff"; fit(c, nm, 600, 30, BODY, ix + iw - dw - nx, 16); c.fillText(nm, nx, y + 35);
+        c.fillStyle = "rgba(255,255,255,.9)"; c.font = "300 20px " + BODY; b.t.ls.forEach((l, k) => c.fillText(l, ix, y + 50 + (k + 1) * b.t.lh - 6));
+      } else { c.fillStyle = "rgba(255,255,255,.72)"; c.font = "italic 300 18px " + BODY; b.t.ls.forEach((l, k) => c.fillText(l, ix, y + 10 + (k + 1) * b.t.lh - 7)); }
+      y += b.h;
+      if (i < blocks.length - 1) { c.fillStyle = "rgba(255,255,255,.16)"; c.fillRect(ix, y + gap / 2 - 1, iw, 1.5); y += gap; }
+    });
+  }
+
+  // footer line
+  c.font = "400 15px " + MONO; c.fillStyle = "rgba(255,255,255,.85)"; c.textAlign = "left";
+  if ((f.artist || "").trim()) c.fillText("ART · " + f.artist.trim().toUpperCase(), M, H - 40);
+  c.textAlign = "right"; const num = (f.number || "").trim(); rarityMark(c, +f.rarity || 0, W - M, H - 45);
+  if (num) c.fillText(num, W - M - (+f.rarity === 3 ? 44 : 24), H - 40);
+  c.textAlign = "left"; c.restore();
+}
+
+/* ---------- form ---------- */
+function fillForm() {
+  document.querySelectorAll("[data-f]").forEach((n) => { const v = state.f[n.dataset.f]; if (n.type === "checkbox") n.checked = !!v; else n.value = v == null ? "" : v; });
+  document.querySelectorAll("#elements button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === state.f.element)));
+  $("zoom").value = state.zoom;
+}
+document.querySelectorAll("[data-f]").forEach((n) => n.addEventListener(n.type === "checkbox" || n.tagName === "SELECT" ? "change" : "input", () => { state.f[n.dataset.f] = n.type === "checkbox" ? n.checked : n.value; draw(); }));
+ELEMENTS.forEach((e) => {
+  const b = el("button"), c = document.createElement("canvas"); b.type = "button"; b.dataset.id = e[0]; c.width = c.height = 48; gem(c.getContext("2d"), e[0], 24, 24, 22);
+  b.append(c, e[1]); b.addEventListener("click", () => { state.f.element = e[0]; fillForm(); draw(); }); $("elements").appendChild(b);
+});
+function say(text, bad) { const m = $("msg"); m.textContent = text; m.style.color = bad ? "var(--down)" : ""; if (text) { clearTimeout(say.t); say.t = setTimeout(() => { m.textContent = ""; }, 5000); } }
+
+/* ---------- art: upload, drop, drag, zoom ---------- */
+function setArt(dataUrl, keepPos) {
+  return new Promise((res) => {
+    if (!dataUrl) { state.art = null; state.artData = null; draw(); return res(); }
+    const img = new Image(); img.onload = () => { state.art = img; state.artData = dataUrl; if (!keepPos) { state.zoom = 1; state.ox = state.oy = 0; } $("zoom").value = state.zoom; draw(); res(); };
+    img.onerror = () => { say("That file couldn't be read as a picture.", true); res(); }; img.src = dataUrl;
+  });
+}
+function loadFile(file) {
+  if (!file || !/^image\//.test(file.type)) { say("Please choose an image file.", true); return; }
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => { // shrink big photos so cards stay small enough to save
+    const k = Math.min(1, 1600 / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); setArt(c.toDataURL("image/jpeg", .86));
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); say("That file couldn't be read as a picture.", true); }; img.src = url;
+}
+$("file").addEventListener("change", (ev) => { loadFile(ev.target.files[0]); ev.target.value = ""; });
+const wrapEl = $("cardwrap");
+["dragover", "drop"].forEach((t) => wrapEl.addEventListener(t, (ev) => { ev.preventDefault(); if (t === "drop") loadFile(ev.dataTransfer.files[0]); }));
+const clamp = (v) => Math.max(-1, Math.min(1, v));
+let drag = null;
+wrapEl.addEventListener("pointerdown", (ev) => { if (!state.art) return; drag = { x: ev.clientX, y: ev.clientY }; wrapEl.setPointerCapture(ev.pointerId); wrapEl.classList.add("drag"); });
+wrapEl.addEventListener("pointermove", (ev) => {
+  const r = wrapEl.getBoundingClientRect(); wrapEl.style.setProperty("--mx", ((ev.clientX - r.left) / r.width * 100) + "%"); wrapEl.style.setProperty("--my", ((ev.clientY - r.top) / r.height * 100) + "%");
+  if (!drag) return; const k = W / r.width, b = artBox(), dx = (ev.clientX - drag.x) * k, dy = (ev.clientY - drag.y) * k; drag = { x: ev.clientX, y: ev.clientY };
+  if (b.dw - W > 1) state.ox = clamp(state.ox - dx * 2 / (b.dw - W)); if (b.dh - H > 1) state.oy = clamp(state.oy - dy * 2 / (b.dh - H)); draw();
+});
+["pointerup", "pointercancel"].forEach((t) => wrapEl.addEventListener(t, () => { drag = null; wrapEl.classList.remove("drag"); }));
+wrapEl.addEventListener("wheel", (ev) => { if (!state.art) return; ev.preventDefault(); state.zoom = Math.max(1, Math.min(3, state.zoom * (ev.deltaY < 0 ? 1.06 : 1 / 1.06))); $("zoom").value = state.zoom; draw(); }, { passive: false });
+$("zoom").addEventListener("input", (ev) => { state.zoom = +ev.target.value; draw(); });
+$("recentre").addEventListener("click", () => { state.zoom = 1; state.ox = state.oy = 0; $("zoom").value = 1; draw(); });
+
+/* ---------- download, save, load ---------- */
+const fileName = () => ((state.f.name || "card").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "card") + ".png";
+$("download").addEventListener("click", () => canvas.toBlob((blob) => { const a = el("a"); a.href = URL.createObjectURL(blob); a.download = fileName(); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); say("Downloaded " + fileName()); }, "image/png"));
+function readSaved() { try { const v = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+function thumb() { const c = document.createElement("canvas"); c.width = 225; c.height = 315; c.getContext("2d").drawImage(canvas, 0, 0, 225, 315); return c.toDataURL("image/webp", .8); }
+$("save").addEventListener("click", () => {
+  const list = readSaved(), rec = { id: state.editing || Date.now().toString(36), f: state.f, art: state.artData, zoom: state.zoom, ox: state.ox, oy: state.oy, thumb: thumb() };
+  const at = list.findIndex((x) => x.id === rec.id); if (at >= 0) list[at] = rec; else list.unshift(rec);
+  try { localStorage.setItem(KEY, JSON.stringify(list)); state.editing = rec.id; say(at >= 0 ? "Saved your changes." : "Saved to My cards."); renderSaved(); }
+  catch (e) { say("This browser's storage is full. Download the card instead, or delete a saved card first.", true); }
+});
+$("fresh").addEventListener("click", () => { state.f = { ...BLANK, name: "", traitName: "", traitText: "", m1Name: "", m1Dmg: "", m2Name: "", m2Dmg: "", m2Text: "", flavor: "", number: "", hp: "100", form: "Basic", rarity: "0", m1Cost: "1", m2Cost: "2", foil: false }; state.editing = null; setArt(null); state.zoom = 1; state.ox = state.oy = 0; fillForm(); draw(); say("Blank card ready."); });
+function renderSaved() {
+  const box = $("saved"), list = readSaved(); box.textContent = "";
+  if (!list.length) { box.className = ""; box.appendChild(el("p", "empty", "No saved cards yet. Make one above and press “Save to my cards”.")); return; }
+  box.className = "saved";
+  list.forEach((rec) => {
+    const fig = el("figure"), img = el("img"), cap = el("figcaption"), del = el("button", null, "Delete"); del.type = "button";
+    img.src = /^data:image\//.test(rec.thumb || "") ? rec.thumb : ""; img.alt = "Edit " + ((rec.f && rec.f.name) || "card"); img.tabIndex = 0;
+    const open = () => { state.f = { ...BLANK, ...rec.f }; state.zoom = rec.zoom || 1; state.ox = rec.ox || 0; state.oy = rec.oy || 0; state.editing = rec.id; fillForm(); setArt(/^data:image\//.test(rec.art || "") ? rec.art : null, true).then(() => { draw(); window.scrollTo({ top: 0, behavior: "smooth" }); }); };
+    img.addEventListener("click", open); img.addEventListener("keydown", (ev) => { if (ev.key === "Enter") open(); });
+    del.addEventListener("click", () => { if (del.textContent === "Delete") { del.textContent = "Sure?"; return; } try { localStorage.setItem(KEY, JSON.stringify(readSaved().filter((x) => x.id !== rec.id))); } catch (e) {} if (state.editing === rec.id) state.editing = null; renderSaved(); });
+    cap.append(el("span", null, (rec.f && rec.f.name) || "Untitled"), del); fig.append(img, cap); box.appendChild(fig);
+  });
+}
+
+fillForm(); draw(); renderSaved();
+if (document.fonts && document.fonts.ready) { ["600 50px Unbounded", "300 20px Sora", "italic 300 18px Sora", "600 30px Sora", "500 17px 'IBM Plex Mono'"].forEach((f) => document.fonts.load(f).catch(() => {})); document.fonts.ready.then(() => draw()); setTimeout(draw, 1500); }
+</script>
+</body>
+</html>
