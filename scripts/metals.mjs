@@ -145,6 +145,23 @@ for (const [sym, cls, metal, name, what] of TICKERS) {
   if (!rows.length) { errors.push("No prices for " + sym); continue; }
   eqOut[sym] = { name, what, metal, kind: cls === "etf" ? "Fund" : "Share", rows };
 }
+/* ---------- live quotes: the latest trade for each share and fund, so the desk moves during the US day ---------- */
+const quotes = {};
+let shown = false;
+for (const [sym, cls] of TICKERS) {
+  try {
+    const j = JSON.parse(get(`https://api.nasdaq.com/api/quote/${sym}/info?assetclass=${cls}`)), pd = j.data && j.data.primaryData;
+    if (!shown) { shown = true; console.log("Quote sample", sym, JSON.stringify(j.data).slice(0, 700)); }
+    if (!pd) continue;
+    const price = num(pd.lastSalePrice), stamp = String(pd.lastTradeTimestamp || ""), m = stamp.match(/([A-Za-z]{3})[a-z]*\.? (\d{1,2}), (\d{4})/);
+    if (price == null || !m) continue;
+    const mon = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(m[1].toLowerCase()) + 1; if (!mon) continue;
+    quotes[sym] = { p: price, d: `${m[3]}-${String(mon).padStart(2, "0")}-${m[2].padStart(2, "0")}`, ts: stamp.slice(0, 60), ch: num(pd.percentageChange) };
+  } catch (e) {}
+}
+console.log("Quotes", Object.keys(quotes).length, Object.entries(quotes).slice(0, 4).map(([k, v]) => k + " " + v.p + " " + v.d + " [" + v.ts + "]").join(" | "));
+if (!Object.keys(quotes).length) errors.push("No live quotes");
+
 console.log("Equities", Object.keys(eqOut).map((k) => k + ":" + eqOut[k].rows.length).join(" "));
 
 /* ---------- news ---------- */
@@ -190,6 +207,12 @@ for (const metal of Object.keys(newsOut)) {
 }
 
 await mkdir("data", { recursive: true });
-await writeFile("data/metals.json", JSON.stringify({ updated: new Date().toISOString(), lme: lmeOut, imf: imfOut, ppi: ppiOut, equities: eqOut, news: newsOut, errors }));
+/* Two files. metals.json holds the long price histories and is rewritten only when a new day's data arrives, so the
+   repository doesn't grow with every run. metals-live.json is small and rewritten every run: live quotes and news. */
+const now = new Date().toISOString(), history = { lme: lmeOut, imf: imfOut, ppi: ppiOut, equities: eqOut };
+const same = ["lme", "imf", "ppi", "equities"].every((k) => JSON.stringify(old[k]) === JSON.stringify(history[k]));
+if (!same) await writeFile("data/metals.json", JSON.stringify({ updated: now, ...history, news: newsOut, errors }));
+await writeFile("data/metals-live.json", JSON.stringify({ updated: now, historyUpdated: same ? old.updated : now, quotes, news: newsOut, errors }));
+console.log("history", same ? "unchanged" : "rewritten");
 console.log("errors:", errors.length ? errors.join("; ") : "none");
 if (!lmeOut.copper.length && !Object.keys(eqOut).length) process.exit(1);
