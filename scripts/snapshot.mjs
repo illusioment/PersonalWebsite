@@ -119,7 +119,7 @@ for (const set of sets) {
 let changes = [];
 try {
   changes = execSync('git log --no-merges -60 --date=short --pretty=format:%ad%x09%s', { encoding: "utf8" })
-    .split("\n").map((l) => l.split("\t")).filter((l) => l.length === 2 && !/^Update (market|metals) data$/.test(l[1]) && !HIDE_CHANGES.test(l[1]))
+    .split("\n").map((l) => l.split("\t")).filter((l) => l.length === 2 && !/^Update (market data|metals data|food photos)$/.test(l[1]) && !HIDE_CHANGES.test(l[1]))
     .slice(0, 12).map(([date, text]) => ({ date, text }));
 } catch (err) { console.warn("no git history available", err.message); }
 await writeFile("data/status.json", JSON.stringify({ updated: new Date().toISOString(), cards: cards.length, sets: sets.length, changes }));

@@ -1,0 +1,38 @@
+name: Update food photos
+
+# Runs when the photo gallery list or this job changes, or by hand from the Actions tab.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - corner/menu/gallery.js
+      - scripts/food-images.mjs
+      - .github/workflows/food-images.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: food-images
+  cancel-in-progress: false
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/food-images.mjs
+      - name: Save the photo list
+        run: |
+          git config user.name "market-data-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/food-images.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update food photos"
+          git pull --rebase
+          git push
