@@ -22,6 +22,7 @@ window.HUB = {
     { id: "tools",       name: "Tools",       blurb: "Things that get a job done." },
     { id: "cards",       name: "Trading Cards", blurb: "Track what cards are worth, and make your own." },
     { id: "corner",      name: "Karly & Andrew's Corner", blurb: "Things we made for the two of us." },
+    { id: "projects",    name: "Projects",    blurb: "Bigger builds, tracked from plan to done." },
     { id: "work",        name: "Work",        blurb: "Apps built for the day job." },
     { id: "experiments", name: "Experiments", blurb: "Half-finished ideas and odd prototypes." }
   ],
@@ -32,6 +33,8 @@ window.HUB = {
     { name: "Metals Desk", desc: "A market monitor for copper, aluminium and steel: prices, signals, analytics and a news wire.", category: "tools", url: "tools/metals/", status: "live data" },
     { name: "Card Market", desc: "Pokémon card prices, market movers and price trends.", category: "cards", url: "tools/card-market/", status: "live data" },
     { name: "Card Maker", desc: "Design a custom trading card with your own art, moves and foil finish, then download it.", category: "cards", url: "cards/card-maker/", status: "new" },
+
+    { name: "Homelab Tracker", desc: "The plan for hosting this site and our files at home: parts, budget, setup checklist and a networking primer.", category: "projects", url: "projects/homelab/", status: "new" },
 
     // Copy this line, remove the two slashes, and fill it in:
     // { name: "My App", desc: "What it does in one sentence.", category: "tools", url: "tools/my-app/", status: "new" },

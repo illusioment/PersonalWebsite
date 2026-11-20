@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homelab Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Homelab project tracker in the hub's palette. Four views switched by the tab
+   row: Overview (progress, goals, next steps), Parts and budget (one choice per
+   group against the budget), Setup checklist (phases of steps), Networking primer.
+   All content comes from plan.js; ticks and choices are kept in this browser. */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.55;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .11), transparent 70%); background-attachment: fixed; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px 56px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.top { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4.6vw, 44px); line-height: 1.1; letter-spacing: -.02em; margin: 40px 0 12px; }
+.lede { color: var(--muted); max-width: 64ch; margin: 0 0 24px; }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 21px; line-height: 1.25; margin: 32px 0 6px; }
+h3 { font-size: 16px; font-weight: 600; margin: 0; }
+.sub { color: var(--muted); margin: 0 0 16px; max-width: 70ch; font-size: 15px; }
+b, strong { font-weight: 600; }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; position: sticky; top: 0; z-index: 3; background: var(--bg); padding: 12px 0; border-bottom: 1px solid var(--line); }
+.tabs button { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; color: var(--muted); font-size: 14.5px; }
+.tabs button:hover { color: var(--text); }
+.tabs button[aria-selected="true"] { background: var(--sun); border-color: var(--sun); color: #1A1400; font-weight: 600; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-top: 24px; }
+.tile .k { color: var(--muted); }
+.tile .v { font-family: var(--font-display); font-size: 26px; line-height: 1.2; margin: 6px 0 8px; }
+.tile .v small { font-family: var(--font-body); font-size: 14px; color: var(--muted); }
+.bar { height: 8px; border-radius: 4px; background: rgba(147, 181, 165, .22); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--leaf); border-radius: 4px; }
+.bar.money i { background: var(--sun); }
+.bar.over i { background: var(--down); }
+.note { color: var(--muted); font-size: 13.5px; margin: 8px 0 0; }
+.warn { color: var(--down); }
+
+.check { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid rgba(42, 90, 75, .6); }
+.check:last-child { border-bottom: 0; }
+.check input { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--leaf); }
+.check label { cursor: pointer; }
+.check .t { font-weight: 400; }
+.check .d { display: block; color: var(--muted); font-size: 14.5px; margin-top: 2px; }
+.check.done .t { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(147, 181, 165, .5); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+ul.plain { margin: 8px 0 0; padding-left: 20px; color: var(--muted); font-size: 14.5px; }
+ul.plain li { margin-bottom: 6px; }
+.go { background: none; border: 0; padding: 0; color: var(--leaf); text-align: left; }
+.go:hover { text-decoration: underline; }
+
+/* parts */
+.builds { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.builds button { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.builds button:hover, .builds button[aria-pressed="true"] { border-color: var(--sun); }
+.builds b { display: block; }
+.builds span { color: var(--muted); font-size: 14px; }
+.builds .num { color: var(--sun); font-size: 14px; display: block; margin-top: 6px; }
+.money { position: sticky; top: 62px; z-index: 2; margin-bottom: 16px; box-shadow: 0 10px 24px rgba(0, 0, 0, .35); }
+.moneyrow { display: flex; flex-wrap: wrap; gap: 6px 28px; align-items: baseline; margin-bottom: 10px; }
+.moneyrow .v { font-family: var(--font-mono); font-size: 20px; }
+.moneyrow label { color: var(--muted); font-size: 14px; }
+.moneyrow input { width: 96px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-family: var(--font-mono); }
+.group { margin-bottom: 16px; }
+.ghead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.ghead label { color: var(--muted); font-size: 14px; display: inline-flex; align-items: center; gap: 8px; }
+.ghead input { width: 18px; height: 18px; accent-color: var(--leaf); margin: 0; }
+.opt { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(42, 90, 75, .6); align-items: start; }
+.opt:first-of-type { margin-top: 10px; }
+.opt input[type="radio"] { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--sun); }
+.opt label { cursor: pointer; }
+.opt .s { display: block; color: var(--muted); font-size: 14.5px; }
+.opt .pc { display: block; font-size: 14px; margin-top: 4px; }
+.opt .pc span { color: var(--muted); }
+.opt.on .n { color: var(--sun); font-weight: 600; }
+.price { display: inline-flex; align-items: center; gap: 2px; font-family: var(--font-mono); color: var(--muted); }
+.price input { width: 76px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; font-family: var(--font-mono); color: var(--text); text-align: right; }
+
+/* checklist */
+details.phase { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px; }
+details.phase summary { list-style: none; cursor: pointer; padding: 16px 20px; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+details.phase summary::-webkit-details-marker { display: none; }
+.pn { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+details.phase.complete .pn { background: var(--leaf); border-color: var(--leaf); color: #06231A; }
+.pt small { display: block; color: var(--muted); font-size: 14px; font-weight: 300; }
+.pc2 { font-family: var(--font-mono); font-size: 13px; color: var(--muted); white-space: nowrap; }
+details.phase .body { padding: 0 20px 12px 68px; }
+.tools { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; color: var(--muted); font-size: 14px; }
+.ghost:hover { border-color: var(--leaf); color: var(--leaf); }
+textarea { width: 100%; min-height: 150px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; resize: vertical; }
+
+/* primer */
+.concept { margin-bottom: 12px; }
+.concept .chead { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; align-items: start; }
+.concept input { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--leaf); }
+.concept p { margin: 6px 0 0 34px; font-size: 15px; }
+.concept .meet { color: var(--muted); }
+.concept .ask { border-left: 2px solid var(--sun); padding-left: 12px; margin-top: 10px; }
+.concept .ask span { display: block; color: var(--sun); }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; max-width: 84ch; }
+@media (max-width: 640px) { .wrap { padding: 0 16px 48px; } details.phase .body { padding-left: 20px; } .opt { grid-template-columns: 22px minmax(0, 1fr); } .opt .price { grid-column: 2; } .money { top: 108px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="mono" href="../../">← Back to hub</a></header>
+  <h1>Homelab Tracker</h1>
+  <p class="lede">The plan for running this site, our files and future apps on hardware at home: what to buy, the order to set it up in, and the networking ideas behind it.</p>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <main id="main"></main>
+  <footer>Progress is saved in this browser only; use “Save progress to a file” to move it to another device. Prices are rough estimates and can be edited. This is a learning plan for a home network; get your employer's and IT provider's agreement before changing anything at work.</footer>
+</div>
+
+<script src="plan.js"></script>
+<script>
+"use strict";
+const P = window.PLAN, KEY = "homelab-tracker";
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const usd = (v) => "$" + Math.round(v).toLocaleString("en-US");
+const VIEWS = [["overview", "Overview"], ["parts", "Parts and budget"], ["steps", "Setup checklist"], ["primer", "Networking primer"], ["notes", "Notes"]];
+
+/* ---------- saved state ---------- */
+const fresh = () => ({ choice: {}, price: {}, bought: {}, done: {}, notes: "", budget: P.budget, open: {} });
+function load() { try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && typeof v === "object") return Object.assign(fresh(), v); } catch (e) {} const s = fresh(); P.builds[0].pick.forEach((id) => { const g = groupOf(id); if (g) s.choice[g.id] = id; }); return s; }
+function groupOf(optId) { return P.parts.find((g) => g.options.some((o) => o[0] === optId)); }
+let S = load();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const view = () => { const h = location.hash.slice(1); return VIEWS.some((v) => v[0] === h) ? h : "overview"; };
+
+/* ---------- sums ---------- */
+const optOf = (g) => g.options.find((o) => o[0] === S.choice[g.id]) || g.options[0];
+const priceOf = (o) => { const v = S.price[o[0]]; return typeof v === "number" && isFinite(v) && v >= 0 ? v : o[2]; };
+const planned = () => P.parts.reduce((a, g) => a + priceOf(optOf(g)), 0);
+const spent = () => P.parts.reduce((a, g) => a + (S.bought[g.id] ? priceOf(optOf(g)) : 0), 0);
+const allSteps = () => P.phases.flatMap((p) => p.steps.map((s) => ({ p, s })));
+const count = (ids) => ids.filter((id) => S.done[id]).length;
+const buildTotal = (b) => b.pick.reduce((a, id) => { const g = groupOf(id), o = g && g.options.find((x) => x[0] === id); return a + (o ? priceOf(o) : 0); }, 0);
+
+function checkRow(id, title, detail, onChange) {
+  const row = el("div", "check" + (S.done[id] ? " done" : "")), box = el("input"), lab = el("label");
+  box.type = "checkbox"; box.id = "x-" + id; box.checked = !!S.done[id]; lab.htmlFor = box.id;
+  lab.appendChild(el("span", "t", title)); if (detail) lab.appendChild(el("span", "d", detail));
+  box.addEventListener("change", () => { S.done[id] = box.checked; save(); row.classList.toggle("done", box.checked); if (onChange) onChange(); });
+  row.append(box, lab); return row;
+}
+function meter(frac, cls) { const b = el("div", "bar " + (cls || "")), i = el("i"); i.style.width = Math.max(0, Math.min(1, frac)) * 100 + "%"; b.appendChild(i); return b; }
+
+/* ---------- overview ---------- */
+function overview(main) {
+  const steps = allSteps(), doneN = count(steps.map((x) => x.s[0])), learn = count(P.concepts.map((c) => c[0])), plan = planned(), over = plan > S.budget;
+  const tiles = el("div", "tiles");
+  const tile = (k, v, small, bar, note) => { const t = el("div", "panel tile"), vv = el("div", "v", v); if (small) vv.appendChild(el("small", null, " " + small)); t.append(el("div", "k mono", k), vv, bar); if (note) t.appendChild(note); tiles.appendChild(t); };
+  tile("Setup steps", String(doneN), "of " + steps.length + " done", meter(doneN / steps.length));
+  tile("Budget planned", usd(plan), "of " + usd(S.budget), meter(plan / S.budget, "money" + (over ? " over" : "")), el("p", "note" + (over ? " warn" : ""), over ? "Over budget by " + usd(plan - S.budget) : usd(S.budget - plan) + " left unplanned · " + usd(spent()) + " spent so far"));
+  tile("Networking ideas", String(learn), "of " + P.concepts.length + " understood", meter(learn / P.concepts.length));
+  main.appendChild(tiles);
+
+  const cols = el("div", "cols"); cols.style.marginTop = "16px";
+  const next = el("div", "panel"); next.appendChild(el("h3", null, "Next up"));
+  const todo = steps.filter((x) => !S.done[x.s[0]]).slice(0, 4);
+  if (!todo.length) next.appendChild(el("p", "note", "Every step is ticked. Time for a new project."));
+  todo.forEach((x) => next.appendChild(checkRow(x.s[0], x.s[1], x.p.name + " · " + x.s[2], render)));
+  const goals = el("div", "panel"); goals.appendChild(el("h3", null, "Goals"));
+  P.goals.forEach((g) => goals.appendChild(checkRow(g[0], g[1], g[2])));
+  cols.append(next, goals); main.appendChild(cols);
+
+  main.appendChild(el("h2", null, "The shape of it"));
+  main.appendChild(el("p", "sub", "Four pieces, each with one job. The network keeps things apart, the server runs the apps, the storage box holds the files, and backups make mistakes survivable."));
+  const shape = el("div", "cols");
+  [["Network", "A gateway that splits the house into zones (yours, servers, gadgets, guests) and decides what may talk to what. This is where the networking learning happens."],
+   ["Server", "One machine running Proxmox, which hosts virtual machines: one for apps like Nextcloud and this website, others for experiments."],
+   ["Storage", "Mirrored hard drives holding files and photos, with snapshots so anything deleted can be rolled back."],
+   ["Access and backup", "Tailscale for private access from anywhere with no open ports, and an encrypted copy of everything kept outside the house."]
+  ].forEach(([h, t]) => { const p = el("div", "panel"); p.append(el("h3", null, h), el("p", "note", t)); shape.appendChild(p); });
+  main.appendChild(shape);
+
+  main.appendChild(el("h2", null, "About the video"));
+  main.appendChild(el("p", "sub", "The video builds one used Dell rack server for about $943. Its build is one of the three in Parts and budget. Here is how it holds up against your goals."));
+  const vid = el("div", "cols");
+  [["What it gets right", P.video.agree], ["What to change", P.video.watch]].forEach(([h, list]) => { const p = el("div", "panel"), ul = el("ul", "plain"); list.forEach((t) => ul.appendChild(el("li", null, t))); p.append(el("h3", null, h), ul); vid.appendChild(p); });
+  main.appendChild(vid);
+}
+
+/* ---------- parts and budget ---------- */
+function parts(main) {
+  main.appendChild(el("h2", null, "Start from a build"));
+  main.appendChild(el("p", "sub", "Pick one, then change any part below. Prices are rough figures from " + P.priced + "; type over any of them when you find a real one."));
+  const bl = el("div", "builds");
+  P.builds.forEach((b) => {
+    const bt = el("button"), same = b.pick.every((id) => { const g = groupOf(id); return g && S.choice[g.id] === id; }); bt.type = "button"; bt.setAttribute("aria-pressed", String(same));
+    bt.append(el("b", null, b.name), el("span", null, b.note), el("span", "num", "about " + usd(buildTotal(b))));
+    bt.addEventListener("click", () => { b.pick.forEach((id) => { const g = groupOf(id); if (g) S.choice[g.id] = id; }); save(); render(); });
+    bl.appendChild(bt);
+  });
+  main.appendChild(bl);
+
+  const money = el("div", "panel money"), row = el("div", "moneyrow"), plan = planned(), over = plan > S.budget;
+  const cell = (k, v, cls) => { const d = el("div"); d.append(el("div", "mono", k), el("div", "v " + (cls || ""), v)); d.firstChild.style.color = "var(--muted)"; return d; };
+  const bl2 = el("label", null, "Budget $ "), bi = el("input"); bi.type = "number"; bi.min = "0"; bi.step = "100"; bi.value = S.budget; bi.setAttribute("aria-label", "Budget in dollars");
+  bi.addEventListener("change", () => { const v = +bi.value; S.budget = v > 0 ? v : P.budget; save(); render(); }); bl2.appendChild(bi);
+  row.append(cell("Planned", usd(plan)), cell(over ? "Over by" : "Left", usd(Math.abs(S.budget - plan)), over ? "warn" : ""), cell("Bought so far", usd(spent())), bl2);
+  money.append(row, meter(plan / S.budget, "money" + (over ? " over" : "")));
+  main.appendChild(money);
+
+  P.parts.forEach((g) => {
+    const box = el("div", "panel group"), head = el("div", "ghead"), bl3 = el("label"), bought = el("input");
+    bought.type = "checkbox"; bought.checked = !!S.bought[g.id]; bought.addEventListener("change", () => { S.bought[g.id] = bought.checked; save(); render(); });
+    bl3.append(bought, "Bought"); head.append(el("h3", null, g.name), bl3); box.append(head, el("p", "note", g.what));
+    g.options.forEach((o) => {
+      const on = optOf(g)[0] === o[0], r = el("div", "opt" + (on ? " on" : "")), radio = el("input"), lab = el("label"), pr = el("span", "price"), pin = el("input");
+      radio.type = "radio"; radio.name = "g-" + g.id; radio.id = "o-" + o[0]; radio.checked = on; lab.htmlFor = radio.id;
+      radio.addEventListener("change", () => { S.choice[g.id] = o[0]; save(); render(); });
+      lab.appendChild(el("span", "n", o[1])); if (o[3]) lab.appendChild(el("span", "s", o[3]));
+      [["Good: ", o[4]], ["Watch: ", o[5]]].forEach(([k, t]) => { if (!t) return; const line = el("span", "pc"); line.append(el("span", null, k), t); lab.appendChild(line); });
+      pin.type = "number"; pin.min = "0"; pin.step = "10"; pin.value = priceOf(o); pin.setAttribute("aria-label", "Price of " + o[1]);
+      pin.addEventListener("change", () => { const v = parseFloat(pin.value); if (isFinite(v) && v >= 0) S.price[o[0]] = v; else delete S.price[o[0]]; save(); render(); });
+      pr.append("$", pin); r.append(radio, lab, pr); box.appendChild(r);
+    });
+    main.appendChild(box);
+  });
+}
+
+/* ---------- checklist ---------- */
+function steps(main) {
+  main.appendChild(el("h2", null, "Setup, in order"));
+  main.appendChild(el("p", "sub", "Each phase leaves you with something that works on its own. Do them top to bottom; the network comes before the server so the server is born into a safe zone."));
+  P.phases.forEach((p, i) => {
+    const ids = p.steps.map((s) => s[0]), d = el("details", "phase"), sum = el("summary"), pt = el("div", "pt"), pc = el("span", "pc2"), body = el("div", "body");
+    const firstOpen = P.phases.find((q) => count(q.steps.map((s) => s[0])) < q.steps.length);
+    d.open = p.id in S.open ? !!S.open[p.id] : firstOpen === p;
+    const refresh = () => { const n = count(ids); pc.textContent = n + " / " + ids.length; d.classList.toggle("complete", n === ids.length); };
+    pt.append(el("h3", null, p.name), el("small", null, p.goal)); sum.append(el("span", "pn", String(i)), pt, pc); d.appendChild(sum);
+    p.steps.forEach((s) => body.appendChild(checkRow(s[0], s[1], s[2], refresh)));
+    d.appendChild(body); d.addEventListener("toggle", () => { S.open[p.id] = d.open; save(); }); refresh(); main.appendChild(d);
+  });
+}
+
+/* ---------- primer ---------- */
+function primer(main) {
+  main.appendChild(el("h2", null, "Networking, in plain words"));
+  main.appendChild(el("p", "sub", "The ideas you will meet while building this, each with a question worth asking the IT company. Tick one when you could explain it to someone else."));
+  P.concepts.forEach((c) => {
+    const box = el("div", "panel concept"), head = el("div", "chead"), cb = el("input"), lab = el("label"), ask = el("p", "ask");
+    cb.type = "checkbox"; cb.id = "x-" + c[0]; cb.checked = !!S.done[c[0]]; lab.htmlFor = cb.id; lab.appendChild(el("h3", null, c[1]));
+    cb.addEventListener("change", () => { S.done[c[0]] = cb.checked; save(); });
+    head.append(cb, lab); ask.append(el("span", "mono", "Ask the IT company"), c[4]);
+    box.append(head, el("p", null, c[2]), el("p", "meet", "At home: " + c[3]), ask); main.appendChild(box);
+  });
+}
+
+/* ---------- notes, save and load ---------- */
+function notes(main) {
+  main.appendChild(el("h2", null, "Notes"));
+  main.appendChild(el("p", "sub", "Order numbers, addresses you assigned, things to ask. Don't put passwords here; they belong in the password manager."));
+  const ta = el("textarea"); ta.value = S.notes || ""; ta.setAttribute("aria-label", "Notes"); ta.addEventListener("input", () => { S.notes = ta.value; save(); }); main.appendChild(ta);
+  const tools = el("div", "tools"), out = el("button", "ghost", "Save progress to a file"), inp = el("button", "ghost", "Load progress from a file"), reset = el("button", "ghost", "Start over"), file = el("input"), msg = el("p", "note");
+  [out, inp, reset].forEach((b) => { b.type = "button"; }); file.type = "file"; file.accept = "application/json,.json"; file.hidden = true;
+  out.addEventListener("click", () => { const a = el("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 2)], { type: "application/json" })); a.download = "homelab-progress.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); });
+  inp.addEventListener("click", () => file.click());
+  file.addEventListener("change", () => { const f = file.files[0]; if (!f) return; f.text().then((t) => { const v = JSON.parse(t); if (!v || typeof v !== "object" || typeof v.done !== "object") throw new Error("shape"); S = Object.assign(fresh(), v); save(); render(); }).catch(() => { msg.textContent = "That file isn't a saved progress file."; }); });
+  reset.addEventListener("click", () => { if (reset.textContent !== "Really start over?") { reset.textContent = "Really start over?"; return; } localStorage.removeItem(KEY); S = load(); render(); });
+  tools.append(out, inp, reset, file); main.append(tools, msg);
+}
+
+function render() {
+  const v = view(), tabs = $("tabs"), main = $("main"); tabs.textContent = ""; main.textContent = "";
+  VIEWS.forEach(([id, label]) => { const b = el("button", null, label); b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(id === v)); b.addEventListener("click", () => { location.hash = id; }); tabs.appendChild(b); });
+  ({ overview, parts, steps, primer, notes })[v](main);
+}
+window.addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+render();
+</script>
+</body>
+</html>
