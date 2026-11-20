@@ -160,6 +160,22 @@ details.notes summary { cursor: pointer; font-family: var(--font-mono); font-wei
 details.notes ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); max-width: 90ch; font-size: 13.5px; }
 details.notes li { margin-bottom: 6px; }
 details.notes b { color: var(--text); font-weight: 600; }
+/* glossary links and card */
+.term { background: none; border: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; text-transform: inherit; text-align: inherit; cursor: help; text-decoration: underline dotted rgba(244, 196, 83, .75); text-underline-offset: 3px; }
+.term:hover { color: var(--sun); text-decoration-style: solid; }
+.term.chip { border: 1px solid var(--line); border-radius: 4px; padding: 3px 9px; font-size: 12.5px; color: var(--text); text-decoration: none; cursor: pointer; }
+.term.chip:hover { border-color: var(--sun); color: var(--sun); }
+.gloss { position: fixed; z-index: 20; left: 16px; top: 80px; width: 380px; max-width: calc(100vw - 16px); max-height: min(520px, calc(100vh - 16px)); overflow: auto; background: #06140F; border: 1px solid var(--sun); border-radius: 6px; padding: 12px 16px 16px; box-shadow: 0 18px 50px rgba(0, 0, 0, .6); font-size: 14px; }
+.gloss:focus { outline: none; }
+.gbar { display: flex; gap: 6px; margin-bottom: 10px; }
+.gbar #glossClose { margin-left: auto; }
+.gloss h3 { font-family: var(--font-display); font-weight: 400; font-size: 17px; line-height: 1.25; margin: 0 0 8px; color: var(--sun); }
+.gloss p { margin: 0 0 9px; }
+.gloss .gsub { color: var(--muted); }
+.ggroup { color: var(--muted); font-size: 11px; margin: 12px 0 6px; }
+.ggroup:first-child { margin-top: 0; }
+.gchips { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 640px) { .gloss { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: auto; max-width: none; max-height: 70vh; border-radius: 10px 10px 0 0; border-width: 1px 0 0; } }
 /* daily briefing */
 .brief .headline { font-family: var(--font-display); font-weight: 400; font-size: clamp(18px, 2.2vw, 24px); line-height: 1.25; margin: 0 0 8px; max-width: 40ch; text-wrap: balance; }
 .brief .lede { margin: 0 0 14px; max-width: 110ch; font-size: 14.5px; }
@@ -202,9 +218,14 @@ footer p { margin: 0 0 6px; }
       <input id="cmd" type="text" placeholder="Type a name or symbol, then Enter  ( / )" autocomplete="off" spellcheck="false" aria-label="Find an instrument" role="combobox" aria-expanded="false" aria-controls="cmdList">
       <ul id="cmdList" hidden></ul>
     </div>
+    <button class="btn" id="glossOpen" type="button">Glossary</button>
     <span class="stamp mono" id="stamp"></span>
   </header>
   <div class="tape" id="tape"></div>
+  <aside class="gloss" id="gloss" hidden tabindex="-1" role="dialog" aria-label="Glossary">
+    <div class="gbar"><button class="btn" id="glossBack" type="button" hidden>← Back</button><button class="btn" id="glossAll" type="button">All terms</button><button class="btn" id="glossClose" type="button" aria-label="Close glossary">Close</button></div>
+    <div id="glossBody"></div>
+  </aside>
   <main id="main"><div class="state">Loading market data…</div></main>
   <footer>
     <p><b>Sources.</b> LME cash settlement, 3-month prices and warehouse stocks as published in <a href="https://www.westmetall.com/en/markdaten.php" target="_blank" rel="noopener">Westmetall's market data tables</a>. US producer price indexes from the <a href="https://www.bls.gov/ppi/" target="_blank" rel="noopener">Bureau of Labor Statistics</a>. Share and fund closes from Nasdaq. Headlines from Google News and trade press feeds; each link opens the publisher's own page.</p>
@@ -708,6 +729,102 @@ function newsPanel() {
 }
 function notes(title, points) { const d = el("details", "panel notes"), ul = el("ul"); d.appendChild(el("summary", null, title)); points.forEach(([h, t]) => { const li = el("li"); li.append(el("b", null, h + " "), t); ul.appendChild(li); }); d.appendChild(ul); return d; }
 
+/* ---------- glossary: terms in the page text become links to short definitions ----------
+   Each entry: t = title, g = group, a = phrases that link to it (ALL-CAPS ones match exactly,
+   others ignore case), d = definition paragraphs, see = related entries. Terms inside a
+   definition link onward, so you can wander from one idea to the next. */
+const GROUPS_G = [["price", "Exchanges and prices"], ["structure", "Market structure"], ["chart", "Reading the charts"], ["copper", "Copper"], ["aluminium", "Aluminium"], ["steel", "Steel"], ["trade", "Trade policy"], ["macro", "Wider market"]];
+const GLOSS = {
+  lme: { t: "LME (London Metal Exchange)", g: "price", a: ["LME", "London Metal Exchange"], see: ["cash", "threemonth", "stocks", "comex", "shfe"], d: ["The London Metal Exchange is the world's main marketplace for industrial metals such as copper, aluminium, zinc, nickel, lead and tin. Its prices, quoted in US dollars per tonne, are the reference that most physical metal contracts around the world are priced against.", "Unlike most futures exchanges, the LME trades a separate date for every business day out to three months, which is why it publishes both a cash price and a 3-month price. It also runs a network of approved warehouses whose stocks are reported daily."] },
+  cash: { t: "Cash price (cash settlement)", g: "price", a: ["cash settlement", "LME cash", "cash price", "cash"], see: ["threemonth", "spread", "lme"], d: ["The LME's official price for metal delivered in two business days. It is the closest thing to a world price for physical metal today, and it is the number most supply contracts use.", "Comparing it with the 3-month price gives the spread, which shows whether metal is tight or plentiful right now."] },
+  threemonth: { t: "3-month price", g: "price", a: ["3-month price", "3-month contract", "3-month", "three-month"], see: ["cash", "spread", "lme"], d: ["The LME price for metal delivered three months from today. It is the most heavily traded contract, so it is the price traders and headlines usually quote.", "Set against the cash price, it tells you the shape of the market: backwardation when cash is higher, contango when 3-month is higher."] },
+  comex: { t: "COMEX", g: "price", a: ["COMEX"], see: ["lme", "cper", "tariff"], d: ["The New York metals exchange, part of CME Group. US copper trades here in cents per pound rather than dollars per tonne.", "New York copper can sit well above the LME price when tariffs or shipping make metal inside the US scarcer. There is no free feed for it, so this desk tracks it through a copper futures fund."] },
+  shfe: { t: "SHFE (Shanghai Futures Exchange)", g: "price", a: ["SHFE", "Shanghai Futures Exchange"], see: ["lme", "china"], d: ["China's main metals exchange, priced in yuan per tonne. Because China uses about half the world's metal, Shanghai prices and stocks are watched alongside the LME; a big gap between the two pulls metal into or out of China."] },
+  tonne: { t: "Tonne", g: "price", a: ["tonnes", "tonne"], see: ["lme", "comex"], d: ["A metric ton: 1,000 kilograms, or about 2,204.6 pounds. LME prices are per tonne; US prices are often per pound. To convert, divide the per-tonne price by 2,204.6, so $11,000 a tonne is about $4.99 a pound."] },
+  spread: { t: "Spread (cash to 3-month)", g: "structure", a: ["cash minus 3-month", "spreads", "spread"], see: ["backwardation", "contango", "stocks"], d: ["The cash price minus the 3-month price. It measures how much buyers will pay to have metal now instead of later.", "A positive spread is a backwardation and signals tightness; a negative one is a contango and signals plenty of metal. This desk also ranks today's spread against the past year to show how unusual it is."] },
+  backwardation: { t: "Backwardation", g: "structure", a: ["backwardation"], see: ["contango", "spread", "stocks"], d: ["When the cash price is above the 3-month price. Buyers are paying extra to get metal immediately, which usually means nearby supply is short.", "A widening backwardation alongside falling warehouse stocks is the classic sign of a tight market. A very sharp one can also come from a squeeze, where one holder controls much of the available metal."] },
+  contango: { t: "Contango", g: "structure", a: ["contango"], see: ["backwardation", "spread", "stocks"], d: ["When the 3-month price is above the cash price. This is the normal state when metal is easy to get: the later price is higher because it includes the cost of storing and financing metal until then.", "A deepening contango with rising warehouse stocks suggests supply is running ahead of demand."] },
+  stocks: { t: "Warehouse stocks", g: "structure", a: ["warehouse stocks", "LME stocks", "exchange warehouses", "stocks"], see: ["warrant", "backwardation", "lme"], d: ["The tonnes of metal sitting in LME-approved warehouses, reported every day. They are only the visible part of world inventory, since most metal is held privately, but they are the best daily signal of whether metal is piling up or being drawn down.", "On this desk “stocks” always means metal inventory; company shares are called shares."] },
+  warrant: { t: "Warrants", g: "structure", a: ["warrants", "warrant"], see: ["stocks", "lme"], d: ["A warrant is the ownership document for one lot of metal in an LME warehouse. Metal “on warrant” is available to the market. When an owner cancels a warrant they are preparing to take the metal out, so a jump in cancelled warrants hints that stocks are about to fall."] },
+  premium: { t: "Physical premium", g: "structure", a: ["regional premium", "premiums", "premium"], see: ["midwest", "lme", "tariff"], d: ["The amount a buyer pays on top of the exchange price to get metal delivered to a particular place. It covers freight, insurance, tariffs and how tight the local market is, so the same metal costs different amounts in different regions."] },
+  ma: { t: "Moving averages (50-day, 200-day)", g: "chart", a: ["moving averages", "moving average", "50-day and 200-day averages", "50-day average", "200-day average", "50-day", "200-day"], see: ["trend", "rsi"], d: ["The average closing price over the last 50 or 200 trading days, redrawn each day. They smooth out daily noise so the direction is easier to see.", "Price above both is generally read as an uptrend and below both as a downtrend. Crossing an average is a moment when many traders reassess, which is why the desk flags it."] },
+  trend: { t: "Uptrend, downtrend, pullback, rebound", g: "chart", a: ["uptrend", "downtrend", "pullback", "rebound"], see: ["ma", "rsi"], d: ["The desk labels trend by where price sits against its moving averages. Above both is an uptrend; below both is a downtrend. Below the 50-day but above the 200-day is a pullback inside a longer rise; above the 50-day but under the 200-day is a rebound inside a longer fall.", "These are descriptions of what has happened, not forecasts."] },
+  rsi: { t: "RSI (relative strength index)", g: "chart", a: ["RSI", "relative strength index", "overbought", "oversold"], see: ["ma", "vol"], d: ["A score from 0 to 100 measuring how one-sided the last 14 days of price moves have been. Above 70 is called overbought (stretched upward) and below 30 oversold (stretched downward).", "It says a move is extended, not that it must reverse; strong trends can stay overbought or oversold for weeks."] },
+  vol: { t: "Volatility", g: "chart", a: ["volatility", "usual daily swing", "usual daily move", "usual swing"], see: ["rsi", "corr"], d: ["How much a price typically moves. The desk measures the usual size of daily changes over the last 30 sessions and scales it to a yearly figure. It is used to judge whether a day's move is ordinary or unusual: a 3% drop matters more in something that normally moves 1% a day."] },
+  corr: { t: "Correlation", g: "chart", a: ["correlations", "correlation"], see: ["vol", "dollar"], d: ["A number from −1 to +1 describing how two things have moved together. +1 means they rose and fell in step, −1 means they moved opposite, 0 means no relationship. The desk uses the last 90 sessions of daily changes.", "Correlations shift over time and say nothing about which one drives the other."] },
+  range12: { t: "12-month range", g: "chart", a: ["12-month range", "12-month high", "12-month low"], see: ["trend", "ytd"], d: ["The lowest and highest closing prices of the past year. The range bar shows where today's price sits between them: far right is near the high, far left near the low. A new 12-month high or low is flagged as a signal."] },
+  ytd: { t: "YTD (year to date)", g: "chart", a: ["YTD", "year to date"], see: ["range12", "indexed"], d: ["The change since the last close of the previous year."] },
+  indexed: { t: "Indexed to 100", g: "chart", a: ["indexed to 100"], see: ["corr", "ytd"], d: ["A way to compare things priced on different scales. Each line is restarted at 100 on the first day shown, so a line at 112 has risen 12% since then. The compare chart uses it so a $12,000 metal and a $50 share can share one axis."] },
+  cathode: { t: "Copper cathode", g: "copper", a: ["cathodes", "cathode"], see: ["concentrate", "smelter", "lme"], d: ["Flat sheets of copper at least 99.99% pure, the finished product of refining and the form of copper the LME contract is based on. Wire and tube makers melt cathode to make their products."] },
+  concentrate: { t: "Concentrate and treatment charges", g: "copper", a: ["concentrates", "concentrate", "treatment charges", "TC/RCs"], see: ["smelter", "cathode"], d: ["What a copper mine actually sells: a powder that is roughly a quarter to a third copper. Smelters turn it into metal and charge miners a fee per tonne, called treatment and refining charges.", "When mines can't supply enough concentrate, those fees fall, sometimes below zero. Very low charges are a sign that mine supply is tight."] },
+  smelter: { t: "Smelters", g: "copper", a: ["smelters", "smelter", "smelting"], see: ["concentrate", "alumina", "cathode"], d: ["Plants that turn ore products into metal. Copper smelters process concentrate; aluminium smelters use huge amounts of electricity to turn alumina into metal, which is why power prices and smelter shutdowns move aluminium."] },
+  cper: { t: "Funds (ETFs)", g: "copper", a: ["ETFs", "ETF", "futures fund", "funds", "fund"], see: ["comex", "indexed"], d: ["An exchange-traded fund is a basket you can buy like a share. Some hold futures contracts and so follow a metal's price, such as the copper futures fund CPER, which tracks New York copper. Others hold the shares of miners or steelmakers and follow the industry instead of the metal."] },
+  alumina: { t: "Bauxite and alumina", g: "aluminium", a: ["bauxite", "alumina"], see: ["smelter", "midwest"], d: ["The two steps before aluminium. Bauxite is the ore; refining it gives alumina, a white powder; smelting alumina gives metal. Roughly four tonnes of bauxite make two of alumina and one of aluminium, so a disruption at any step moves the metal price."] },
+  midwest: { t: "Midwest premium", g: "aluminium", a: ["Midwest premium"], see: ["premium", "tariff", "lme"], d: ["The premium US buyers pay over the LME price for aluminium delivered to the Midwest. Because the US imports much of its aluminium, the premium rises and falls with import tariffs and freight. It comes from paid price services, so it is not charted here."] },
+  hrc: { t: "Hot-rolled coil (HRC)", g: "steel", a: ["hot-rolled coil", "HRC"], see: ["scrap", "ppi", "eaf"], d: ["Steel rolled into wide sheet while hot and wound into coils. It is the basic flat product that goes into cars, appliances and construction, and its US Midwest price is the country's steel benchmark. That price comes from paid services, which is why this desk reads steel through shares and producer price indexes instead."] },
+  scrap: { t: "Steel scrap", g: "steel", a: ["steel scrap", "scrap"], see: ["eaf", "hrc"], d: ["Recycled iron and steel. It is the main raw material for electric arc furnaces, which make most US steel, so scrap prices feed straight into steelmakers' costs and tend to lead finished steel prices."] },
+  eaf: { t: "Electric arc furnace (EAF)", g: "steel", a: ["electric arc furnaces", "electric arc furnace", "electric-arc", "EAF"], see: ["scrap", "hrc"], d: ["A furnace that melts scrap with electricity. Most US steel is made this way; the older route uses blast furnaces fed with iron ore and coking coal. EAF mills, such as Nucor and Steel Dynamics, have costs tied to scrap and power prices."] },
+  ppi: { t: "Producer price index (PPI)", g: "steel", a: ["producer price indexes", "producer price index", "producer prices", "PPI"], see: ["hrc", "scrap"], d: ["A monthly index from the US Bureau of Labor Statistics tracking the prices domestic producers receive for their goods. Each index is set to 100 in a base year, so 320 means prices are 3.2 times that base.", "It arrives a few weeks after the month ends, so it confirms trends more than it breaks news. It is the best free measure of US steel and metal product prices."] },
+  tariff: { t: "Tariffs and Section 232", g: "trade", a: ["Section 232", "tariffs", "tariff"], see: ["antidumping", "cbam", "premium"], d: ["A tariff is a tax on imports. Section 232 is the US law that allows tariffs on national-security grounds; it has been used since 2018 for steel and aluminium and more recently for copper products. The rates have changed several times, so check the news wire for the current ones.", "Tariffs raise prices inside the protected country relative to the world price, which shows up in premiums and in the gap between New York and London copper."] },
+  antidumping: { t: "Anti-dumping duties", g: "trade", a: ["anti-dumping", "antidumping", "countervailing"], see: ["tariff", "cbam"], d: ["Extra import taxes aimed at specific products from specific countries judged to be selling below cost (dumping) or with government subsidies (countervailing duties). Steel is the most frequent target."] },
+  cbam: { t: "CBAM", g: "trade", a: ["CBAM", "carbon border"], see: ["tariff", "antidumping"], d: ["The European Union's Carbon Border Adjustment Mechanism. Importers of steel, aluminium and some other goods pay a charge based on the carbon emitted making them, to match what EU producers pay. It favours low-emission producers and is reshaping trade flows into Europe."] },
+  base: { t: "Base metals", g: "macro", a: ["base metals"], see: ["lme", "china"], d: ["The common industrial metals: copper, aluminium, zinc, nickel, lead and tin. The name sets them apart from precious metals such as gold and silver. They tend to move with the health of manufacturing and construction."] },
+  dollar: { t: "The dollar and metals", g: "macro", a: ["firmer dollar", "softer dollar", "stronger dollar", "the dollar"], see: ["corr", "china"], d: ["Metals are priced in US dollars. When the dollar strengthens, metal becomes more expensive for buyers using other currencies, which tends to weigh on prices; a weaker dollar does the opposite. The desk tracks the dollar through a fund that follows it against other major currencies."] },
+  china: { t: "China's role", g: "macro", a: ["Chinese shares", "China"], see: ["shfe", "dollar", "base"], d: ["China uses about half of the world's copper, aluminium and steel and produces more than half of its steel and aluminium. Its property market, factory activity and government stimulus are the largest single influence on metal demand, so the desk watches Chinese shares as a stand-in."] }
+};
+const TERM_RE = (() => {
+  const all = []; Object.entries(GLOSS).forEach(([id, e]) => e.a.forEach((a) => all.push([a, id])));
+  all.sort((x, y) => y[0].length - x[0].length);
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&");
+  return { re: new RegExp("(?<![\\w-])(" + all.map((x) => esc(x[0])).join("|") + ")(?![\\w])", "gi"), find(m) { const exact = all.find((x) => x[0] === m); if (exact) return exact[1]; const loose = all.find((x) => x[0].toLowerCase() === m.toLowerCase() && x[0] !== x[0].toUpperCase()); return loose ? loose[1] : null; } };
+})();
+/* Turn glossary phrases inside one text node into term buttons; each term links once per block. */
+const seenTerms = new WeakMap();
+function linkText(node, skipId) {
+  const text = node.nodeValue; if (!text || text.length < 3) return;
+  const block = node.parentElement.closest("p,li,h2,h3,dt,dd,small,td,th,summary,div") || node.parentElement;
+  let seen = seenTerms.get(block); if (!seen) { seen = new Set(); seenTerms.set(block, seen); }
+  const frag = document.createDocumentFragment(); let last = 0, hit = false, m; TERM_RE.re.lastIndex = 0;
+  while ((m = TERM_RE.re.exec(text))) {
+    const id = TERM_RE.find(m[1]); if (!id || id === skipId || seen.has(id)) continue; seen.add(id); hit = true;
+    frag.append(text.slice(last, m.index)); const b = el("button", "term", m[1]); b.type = "button"; b.dataset.term = id; frag.append(b); last = m.index + m[1].length;
+  }
+  if (!hit) return; frag.append(text.slice(last)); node.parentNode.replaceChild(frag, node);
+}
+function linkTerms(root, skipId) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => n.parentElement.closest("button,a,input,svg,select,textarea,tr.row,.tip,.kv dd,.num,.big,.title,.chipx,time") ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode); nodes.forEach((n) => linkText(n, skipId));
+}
+const gloss = { trail: [], from: null };
+function showTerm(id, anchor) {
+  const card = $("gloss"), body = $("glossBody"), e = GLOSS[id], outside = !!anchor && !card.contains(anchor); body.textContent = "";
+  if (id === "index") {
+    body.appendChild(el("h3", null, "Glossary")); body.appendChild(el("p", "gsub", Object.keys(GLOSS).length + " terms. Words with a dotted underline anywhere on the desk open their entry."));
+    GROUPS_G.forEach(([g, label]) => { const list = Object.entries(GLOSS).filter(([, x]) => x.g === g); if (!list.length) return; body.appendChild(el("div", "ggroup mono", label)); const row = el("div", "gchips"); list.forEach(([k, x]) => { const b = el("button", "term chip", x.t.replace(/ \(.*\)$/, "")); b.type = "button"; b.dataset.term = k; row.appendChild(b); }); body.appendChild(row); });
+  } else if (e) {
+    body.appendChild(el("div", "ggroup mono", (GROUPS_G.find((x) => x[0] === e.g) || ["", ""])[1])); body.appendChild(el("h3", null, e.t));
+    e.d.forEach((t) => body.appendChild(el("p", null, t)));
+    if (e.see && e.see.length) { body.appendChild(el("div", "ggroup mono", "Related")); const row = el("div", "gchips"); e.see.forEach((k) => { if (!GLOSS[k]) return; const b = el("button", "term chip", GLOSS[k].t.replace(/ \(.*\)$/, "")); b.type = "button"; b.dataset.term = k; row.appendChild(b); }); body.appendChild(row); }
+    const back = Object.entries(GLOSS).filter(([k, x]) => k !== id && !(e.see || []).includes(k) && (x.see || []).includes(id));
+    if (back.length) { body.appendChild(el("div", "ggroup mono", "Also mentioned in")); const row = el("div", "gchips"); back.forEach(([k, x]) => { const b = el("button", "term chip", x.t.replace(/ \(.*\)$/, "")); b.type = "button"; b.dataset.term = k; row.appendChild(b); }); body.appendChild(row); }
+    body.querySelectorAll("p").forEach((p) => linkTerms(p, id));
+  } else return;
+  if (outside) { gloss.trail = []; gloss.from = anchor; } else if (gloss.cur && gloss.cur !== id) gloss.trail.push(gloss.cur);
+  gloss.cur = id; $("glossBack").hidden = !gloss.trail.length; $("glossAll").hidden = id === "index"; card.hidden = false; card.scrollTop = 0;
+  if (outside && innerWidth > 640) { const r = anchor.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight; card.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + "px"; card.style.top = (r.bottom + h + 12 > innerHeight && r.top - h - 8 > 0 ? r.top - h - 8 : Math.min(r.bottom + 8, Math.max(8, innerHeight - h - 8))) + "px"; }
+  card.focus({ preventScroll: true });
+}
+function hideTerm() { const card = $("gloss"); if (card.hidden) return; card.hidden = true; gloss.cur = null; gloss.trail = []; if (gloss.from && document.contains(gloss.from)) gloss.from.focus({ preventScroll: true }); }
+document.addEventListener("click", (ev) => {
+  const t = ev.target.closest(".term"); if (t) { ev.preventDefault(); ev.stopPropagation(); showTerm(t.dataset.term, t); return; }
+  if (!ev.target.closest("#gloss")) hideTerm();
+}, true);
+addEventListener("keydown", (ev) => { if (ev.key === "Escape") hideTerm(); });
+$("glossClose").addEventListener("click", hideTerm);
+$("glossBack").addEventListener("click", () => { const id = gloss.trail.pop(); gloss.cur = null; if (id) showTerm(id, $("glossBack")); });
+$("glossAll").addEventListener("click", () => showTerm("index", $("glossAll")));
+$("glossOpen").addEventListener("click", (ev) => { ev.stopPropagation(); showTerm("index", $("glossOpen")); });
+
 /* ---------- page ---------- */
 function render() {
   const main = $("main"), keepQ = document.activeElement && document.activeElement.id === "newsq";
@@ -729,6 +846,7 @@ function render() {
     ["Steel.", "There is no single world steel price. The US benchmark, Midwest hot-rolled coil, comes from paid services. Here steel is read through monthly producer price indexes, scrap (the main input for US electric-arc mills), iron ore producers and steel shares."],
     ["Drivers.", "A stronger dollar usually weighs on metals because they are priced in dollars. China uses about half the world's metal, so its markets and stimulus news matter. Housing and industrial shares stand in for demand."]
   ]));
+  linkTerms(main);
   if (keepQ) { const q = $("newsq"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 }
 fetch("../../data/metals.json").then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }).then((d) => {
