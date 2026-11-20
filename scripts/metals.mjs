@@ -103,20 +103,30 @@ for (const [key, code] of [["copper", "PCOPP"], ["aluminum", "PALUM"], ["ironore
 const PPI = [
   ["WPU101", "Iron and steel", "steel"], ["WPU1017", "Steel mill products", "steel"],
   ["WPU101707", "Cold rolled steel sheet and strip", "steel"], ["WPU1012", "Iron and steel scrap", "steel"],
-  ["WPU102502", "Copper and brass mill shapes", "copper"], ["WPU102301", "Copper base scrap", "copper"], ["WPU102501", "Aluminum mill shapes", "aluminum"]
+  ["WPU102502", "Copper and brass mill shapes", "copper"], ["WPU102301", "Copper base scrap", "copper"], ["WPU102501", "Aluminum mill shapes", "aluminum"],
+  // Industry indexes that matter to a US sheet and coil distributor. The six digits are the industry's NAICS code.
+  ["PCU423510423510", "Metal service centers (distributor selling prices)", "steel"], ["PCU331110331110", "Iron and steel mills (mill selling prices)", "steel"],
+  ["PCU331221331221", "Cold-rolled steel shapes", "steel"], ["PCU332322332322", "Sheet metal work", "steel"],
+  ["PCU331315331315", "Aluminum sheet, plate and foil", "aluminum"], ["PCU331420331420", "Copper rolling, drawing and extruding", "copper"]
 ];
 const year = new Date().getUTCFullYear();
-let ppiOut = {};
-try {
+let ppiOut = {}, oldLive = {};
+try { oldLive = JSON.parse(await readFile("data/metals-live.json", "utf8")); } catch (e) {}
+// These indexes change once a month and the service allows few requests a day, so ask at most every eight hours.
+const ppiFresh = old.ppi && PPI.every((p) => old.ppi[p[0]] || (oldLive.ppiMissing || []).includes(p[0])) && Date.now() - new Date(oldLive.ppiChecked || 0) < 8 * 36e5;
+let ppiChecked = oldLive.ppiChecked || null, ppiMissing = oldLive.ppiMissing || [];
+if (ppiFresh) ppiOut = old.ppi;
+else try {
   const j = JSON.parse(get("https://api.bls.gov/publicAPI/v2/timeseries/data/", { json: { seriesid: PPI.map((p) => p[0]), startyear: String(year - 6), endyear: String(year) } }));
   for (const s of j.Results.series) {
     const meta = PPI.find((p) => p[0] === s.seriesID);
     const rows = s.data.filter((d) => /^M(0[1-9]|1[0-2])$/.test(d.period) && num(d.value) != null).map((d) => [d.year + "-" + d.period.slice(1), num(d.value)]).sort((a, b) => (a[0] < b[0] ? -1 : 1));
     if (meta && rows.length) ppiOut[s.seriesID] = { name: meta[1], metal: meta[2], rows };
   }
+  if (Object.keys(ppiOut).length) { ppiChecked = new Date().toISOString(); ppiMissing = PPI.map((p) => p[0]).filter((id) => !ppiOut[id]); }
 } catch (e) {}
 if (!Object.keys(ppiOut).length) { errors.push("BLS producer price indexes could not be read"); ppiOut = old.ppi || {}; }
-console.log("PPI", Object.keys(ppiOut).map((k) => k + ":" + ppiOut[k].rows.length).join(" "));
+console.log("PPI", ppiFresh ? "(reused)" : "(fetched)", Object.keys(ppiOut).map((k) => k + ":" + ppiOut[k].rows.length + ":" + ppiOut[k].rows[ppiOut[k].rows.length - 1].join("=")).join(" "), "| missing:", ppiMissing.join(",") || "none");
 
 /* ---------- shares and funds (daily closes) ---------- */
 const TICKERS = [
@@ -128,6 +138,7 @@ const TICKERS = [
   ["XME", "etf", "all", "SPDR Metals & Mining ETF", "Broad US metals and mining shares"],
   ["TECK", "stocks", "copper", "Teck Resources", "Copper and zinc miner, Canada and Chile"], ["BHP", "stocks", "copper", "BHP", "Largest miner: copper and iron ore"], ["RIO", "stocks", "aluminum", "Rio Tinto", "Iron ore, aluminium and copper"],
   ["VALE", "stocks", "steel", "Vale", "Largest iron ore producer"], ["CMC", "stocks", "steel", "Commercial Metals", "US rebar and scrap recycler"], ["RS", "stocks", "steel", "Reliance", "Largest US metals service centre"],
+  ["RYI", "stocks", "steel", "Ryerson", "US metals service centre: sheet, coil and plate"], ["WS", "stocks", "steel", "Worthington Steel", "US flat-rolled steel processor"], ["CSTM", "stocks", "aluminum", "Constellium", "Aluminium sheet and rolled products"],
   ["DBB", "etf", "all", "Invesco DB Base Metals", "Fund tracking copper, aluminium and zinc futures"], ["PICK", "etf", "all", "iShares Global Metals & Mining", "Global diversified miners"],
   ["UUP", "etf", "driver", "US dollar (UUP)", "Dollar index fund. A stronger dollar usually weighs on metals"], ["FXI", "etf", "driver", "China large caps (FXI)", "China shares. China uses about half the world's metal"],
   ["ITB", "etf", "driver", "US homebuilders (ITB)", "Housing is a big user of copper and steel"], ["XLI", "etf", "driver", "US industrials (XLI)", "Manufacturing demand"],
@@ -212,7 +223,7 @@ await mkdir("data", { recursive: true });
 const now = new Date().toISOString(), history = { lme: lmeOut, imf: imfOut, ppi: ppiOut, equities: eqOut };
 const same = ["lme", "imf", "ppi", "equities"].every((k) => JSON.stringify(old[k]) === JSON.stringify(history[k]));
 if (!same) await writeFile("data/metals.json", JSON.stringify({ updated: now, ...history, news: newsOut, errors }));
-await writeFile("data/metals-live.json", JSON.stringify({ updated: now, historyUpdated: same ? old.updated : now, quotes, news: newsOut, errors }));
+await writeFile("data/metals-live.json", JSON.stringify({ updated: now, historyUpdated: same ? old.updated : now, ppiChecked, ppiMissing, quotes, news: newsOut, errors }));
 console.log("history", same ? "unchanged" : "rewritten");
 console.log("errors:", errors.length ? errors.join("; ") : "none");
 if (!lmeOut.copper.length && !Object.keys(eqOut).length) process.exit(1);
