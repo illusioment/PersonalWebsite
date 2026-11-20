@@ -147,10 +147,32 @@ dialog::backdrop { background: rgba(3, 12, 10, .78); }
 .msg { color: var(--sun); font-size: 14.5px; min-height: 22px; margin: 0; }
 footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; max-width: 80ch; }
 
+/* photos: a banner on each dish card and recipe, small rounds beside ingredients, and the Photos tab */
+.dish .photo { margin: -24px -24px 6px; border-radius: 13px 13px 0 0; overflow: hidden; aspect-ratio: 16 / 10; background: #0A211B; }
+.dish .photo img, .hero img, .pcard .main img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hero { margin: 14px 0 6px; }
+.hero div { border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 9; background: #0A211B; }
+.credit { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; line-height: 1.35; }
+.credit a { color: var(--muted); }
+.ing .nm { display: flex; align-items: center; gap: 8px; }
+.ing .nm img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex: none; background: #0A211B; }
+.pgroup { font-family: var(--font-display); font-weight: 400; font-size: 24px; margin: 28px 0 12px; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.pcard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
+.pcard .main { aspect-ratio: 4 / 3; background: #0A211B; }
+.pcard .body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.pcard h4 { margin: 0; font-size: 15.5px; font-weight: 600; line-height: 1.25; }
+.pcard .used { color: var(--muted); font-size: 13px; margin: 0; }
+.pcard .none { color: var(--muted); font-size: 13px; padding: 28px 14px; text-align: center; }
+.alts { display: flex; gap: 6px; margin-top: auto; padding-top: 6px; }
+.alts button { width: 46px; height: 46px; padding: 0; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #0A211B; }
+.alts button[aria-pressed="true"] { border-color: var(--sun); }
+.alts button:hover { border-color: var(--leaf); }
+.alts img { display: block; width: 100%; height: 100%; object-fit: cover; }
 @media (max-width: 720px) { .wrap { padding: 0 16px 40px; } .sheet { padding: 22px 20px 26px; } .picks li { grid-template-columns: minmax(0, 1fr) auto; } }
 @media print {
   body { background: #fff; color: #000; }
-  .top, .tabs, h1, .eyebrow, .lede, footer, .bar, #view-menu, #view-week, dialog { display: none !important; }
+  .top, .tabs, h1, .eyebrow, .lede, footer, .bar, #view-menu, #view-week, #view-photos, dialog { display: none !important; }
   #view-list { display: block !important; }
   .aisle { border: 0; padding: 0 0 8px; background: none; }
   .aisle h3, .item .amt, .staples, .item small { color: #000; }
@@ -175,6 +197,7 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
     <a class="btn mono" href="#menu" data-view="menu">1 · Menu</a>
     <a class="btn mono" href="#week" data-view="week" id="tabWeek">2 · Our week</a>
     <a class="btn mono" href="#list" data-view="list">3 · Shopping list</a>
+    <a class="btn mono" href="#photos" data-view="photos">Photos</a>
   </nav>
 
   <!-- ============ 1. Menu ============ -->
@@ -233,12 +256,19 @@ footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line);
     </div>
   </section>
 
-  <footer>Your choices and ticked items are saved in this browser only, so each phone or computer keeps its own copy. Nutrition figures are approximate and for general interest, not medical or dietary advice.</footer>
+  <!-- ============ Photos ============ -->
+  <section id="view-photos" hidden>
+    <p class="sub" style="max-width: 70ch">Every photo the menu uses, and what it is linked to. If a picture doesn't suit the food, click one of the smaller alternatives underneath to use that instead; your choice is saved in this browser. Photos come from Wikimedia Commons under open licences.</p>
+    <div id="gallery"><div class="state">Photos are loading…</div></div>
+  </section>
+
+  <footer>Photos are from Wikimedia Commons; each one's author and licence are listed on the Photos tab. Your choices and ticked items are saved in this browser only, so each phone or computer keeps its own copy. Nutrition figures are approximate and for general interest, not medical or dietary advice.</footer>
 </div>
 
 <dialog id="recipe" aria-labelledby="rName"><div class="sheet" id="sheet"></div></dialog>
 
 <script src="recipes.js"></script>
+<script src="gallery.js"></script>
 <script>
 const BOOK = window.COOKBOOK || [], SIDES = window.SIDES || [], GENRES = window.GENRES || [];
 const $ = (id) => document.getElementById(id);
@@ -360,8 +390,48 @@ function card(r) {
   add.addEventListener("click", () => openSides(r.id));
   row.append(view, add);
   node.append(top, el("h3", null, r.name), pair, el("p", null, r.blurb), facts, row);
+  const ph = photo("dish:" + r.id); if (ph) { const box = el("div", "photo"); box.appendChild(pic(ph)); node.prepend(box); }
   return node;
 }
+
+/* ---------- photos: the gallery links each dish, side and ingredient to pictures (see gallery.js) ---------- */
+const GAL = window.GALLERY || { dishes: {}, sides: {}, ingredients: [], picks: {} };
+let PHOTOS = { images: {}, links: {} }, photoPicks = {};
+try { photoPicks = JSON.parse(localStorage.getItem("menu-photo-picks") || "{}") || {}; } catch (e) {}
+const ING_WORDS = (GAL.ingredients || []).map(([w]) => [w, new RegExp("\\b" + w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(s|es)?\\b", "i")]);
+function ingKey(name) { if (/vinegar|stock|paste/i.test(name)) return ""; const hit = ING_WORDS.find(([, re]) => re.test(name)); return hit ? "ing:" + hit[0] : ""; }
+function photo(key) { // the chosen picture for a food: your pick, then a pinned file, then the first match
+  const ids = (key && PHOTOS.links[key]) || []; if (!ids.length) return null;
+  let id = ids.includes(photoPicks[key]) ? photoPicks[key] : null;
+  if (!id && GAL.picks && GAL.picks[key]) id = ids.find((x) => PHOTOS.images[x] && PHOTOS.images[x].t === GAL.picks[key]);
+  id = id || ids[0]; const im = PHOTOS.images[id]; return im && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(im.th) ? Object.assign({ id }, im) : null;
+}
+/* Wikimedia serves thumbnails in fixed widths; ask for the smallest that suits where the picture is shown. */
+function pic(im, width = 500) { const i = el("img"); i.src = im.th.replace(/\/\d+px-/, "/" + width + "px-"); i.alt = ""; i.loading = "lazy"; i.decoding = "async"; i.referrerPolicy = "no-referrer"; i.addEventListener("error", () => { i.style.visibility = "hidden"; }); return i; }
+function credit(im) {
+  const c = el("span", "credit"), a = el("a", null, "Wikimedia Commons"); a.href = /^https:\/\/commons\.wikimedia\.org\//.test(im.pg) ? im.pg : "https://commons.wikimedia.org/"; a.target = "_blank"; a.rel = "noopener noreferrer";
+  c.append("Photo: " + im.by + " · " + im.lic + " · ", a); return c;
+}
+function renderPhotos() {
+  const box = $("gallery"); box.textContent = "";
+  if (!Object.keys(PHOTOS.links).length) { box.appendChild(el("div", "state", "No photos have been collected yet.")); return; }
+  const uses = (word) => { const re = (ING_WORDS.find((x) => x[0] === word) || [])[1]; return BOOK.concat(SIDES).filter((r) => r.ingredients.some((i) => ingKey(i[2]) === "ing:" + word)).map((r) => r.name); };
+  const groups = [["Dishes", BOOK.map((r) => ["dish:" + r.id, r.name, GENRES.find((g) => g.id === r.genre).name])], ["Sides", SIDES.map((s) => ["side:" + s.id, s.name, s.type === "starch" ? "Potatoes, grains & bread" : "Vegetables & salads"])],
+    ["Ingredients", (GAL.ingredients || []).map(([w]) => { const u = uses(w); return ["ing:" + w, cap(w), u.length ? "Used in " + u.length + (u.length === 1 ? " recipe: " : " recipes: ") + u.slice(0, 3).join("; ") + (u.length > 3 ? "; and " + (u.length - 3) + " more" : "") : "Not used in a recipe yet"]; })]];
+  groups.forEach(([label, items]) => {
+    box.appendChild(el("h2", "pgroup", label)); const grid = el("div", "pgrid");
+    items.forEach(([key, name, sub]) => {
+      const card = el("article", "pcard"), body = el("div", "body"), cur = photo(key), ids = PHOTOS.links[key] || [];
+      if (cur) { const m = el("div", "main"); m.appendChild(pic(cur)); card.appendChild(m); } else card.appendChild(el("div", "none", "No suitable photo found"));
+      body.append(el("h4", null, name), el("p", "used", sub)); if (cur) body.appendChild(credit(cur));
+      if (ids.length > 1) { const alts = el("div", "alts"); ids.forEach((id, n) => { const im = PHOTOS.images[id]; if (!im) return; const b = el("button"); b.type = "button"; b.setAttribute("aria-pressed", String(cur && cur.id === id)); b.setAttribute("aria-label", "Use photo " + (n + 1) + " for " + name); b.title = im.t.replace(/^File:/, "");
+        b.appendChild(pic(Object.assign({ id }, im), 120)); b.addEventListener("click", () => { photoPicks[key] = id; try { localStorage.setItem("menu-photo-picks", JSON.stringify(photoPicks)); } catch (e) {} const y = scrollY; renderMenu(); renderPhotos(); scrollTo(0, y); }); alts.appendChild(b); }); body.appendChild(alts); }
+      card.appendChild(body); grid.appendChild(card);
+    });
+    box.appendChild(grid);
+  });
+}
+fetch("../../data/food-images.json").then((r) => r.ok ? r.json() : null).then((d) => { if (d && d.images && d.links) { PHOTOS = d; renderMenu(); } renderPhotos(); }).catch(() => renderPhotos());
 
 /* ---------- choosing sides ---------- */
 function openSides(id) {
@@ -416,7 +486,7 @@ function openSides(id) {
 /* ---------- recipe sheet ---------- */
 function ingList(r, k) {
   const ing = el("ul", "ing");
-  r.ingredients.forEach(([q, u, name]) => { const li = el("li"); li.append(el("span", "amt num", amount(q * k, u)), el("span", null, cap(name))); ing.appendChild(li); });
+  r.ingredients.forEach(([q, u, name]) => { const li = el("li"), nm = el("span", "nm"), ph = photo(ingKey(name)); if (ph) nm.appendChild(pic(ph, 120)); nm.append(cap(name)); li.append(el("span", "amt num", amount(q * k, u)), nm); ing.appendChild(li); });
   return ing;
 }
 function openRecipe(id) {
@@ -431,7 +501,8 @@ function openRecipe(id) {
     .forEach(([l, v]) => { const s = el("span"); s.append(l + " ", el("b", null, v)); facts.appendChild(s); });
   const steps = el("ol", "steps");
   r.steps.forEach((s) => steps.appendChild(el("li", null, s)));
-  sheet.append(close, el("div", "mono leaf", kind(r) + " · " + GENRES.find((g) => g.id === r.genre).name), h, facts,
+  const hero = el("figure", "hero"), hp = photo("dish:" + r.id); if (hp) { const box = el("div"); box.appendChild(pic(hp, 960)); hero.append(box, credit(hp)); }
+  sheet.append(close, el("div", "mono leaf", kind(r) + " · " + GENRES.find((g) => g.id === r.genre).name), h, facts, hp ? hero : "",
     el("h3", null, "Ingredients for " + state.servings), ingList(r, k), el("h3", null, "Method"), steps, el("p", "chef", r.note));
   if (sides.length) {
     sheet.appendChild(el("h3", null, p ? "Your sides" : "Suggested sides"));
@@ -592,7 +663,7 @@ $("servings").value = String(state.servings);
 $("servings").addEventListener("change", (e) => { state.servings = +e.target.value; save(); renderAll(); });
 function renderAll() { renderMenu(); renderWeek(); renderList(); }
 function showView() {
-  const all = ["menu", "week", "list"], view = all.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu";
+  const all = ["menu", "week", "list", "photos"], view = all.includes(location.hash.slice(1)) ? location.hash.slice(1) : "menu";
   all.forEach((v) => { $("view-" + v).hidden = v !== view; });
   document.querySelectorAll(".tabs a").forEach((a) => { if (a.dataset.view === view) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
   scrollTo({ top: 0 });

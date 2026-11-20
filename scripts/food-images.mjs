@@ -17,7 +17,7 @@ for (const [id, q] of Object.entries(G.sides)) jobs.push(["side:" + id, q]);
 for (const [word, q] of G.ingredients) jobs.push(["ing:" + word, q]);
 
 const OK_LICENCE = /^(cc0|public domain|pd\b|cc by(-sa)? \d)/i;
-const SKIP_TITLE = /logo|map\b|diagram|chart|label|packag|advert|poster|drawing|painting|illustration|engraving|icon|stamp|sign\b|\.svg$|\.png$|\.gif$|\.tif/i;
+const SKIP_TITLE = /logo|map\b|diagram|chart|label|packag|advert|poster|drawing|painting|illustration|engraving|icon|stamp|sign\b|child|labou?r|portrait|concert|festival|wall art|beetle|flower|blüten|früchte|sprout|scab|disease|ornitholog|birds? of|vineyard|restaurant|ristorante|\.svg$|\.png$|\.gif$|\.tif/i;
 const text = (html) => String(html || "").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&[a-z#0-9]+;/gi, " ").replace(/\s+/g, " ").trim();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

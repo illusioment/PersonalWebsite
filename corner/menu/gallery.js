@@ -14,31 +14,31 @@ window.GALLERY = {
   dishes: {
     "duck-cherry": "magret de canard", "steak-poivre": "steak au poivre", "salmon-beurre-blanc": "pan seared salmon fillet", "mussels-wine": "moules marinières",
     "coq-au-vin": "coq au vin", "sole-meuniere": "sole meunière", "mushroom-risotto": "mushroom risotto", "chicken-marsala": "chicken marsala",
-    "squash-pasta": "pappardelle pasta dish", "shrimp-orzo": "orzo with shrimp", "pork-saltimbocca": "saltimbocca alla romana", "sausage-rigatoni": "rigatoni with sausage",
-    "eggplant-parm": "parmigiana di melanzane", "miso-cod": "miso glazed black cod", "tuna-sesame": "seared tuna sesame", "gochujang-chicken": "korean spicy chicken dish",
-    "green-curry-shrimp": "thai green curry", "mapo-tofu": "mapo tofu", "lamb-harissa": "grilled lamb chops", "cauliflower-romesco": "roasted cauliflower steak",
-    "halloumi-farro": "grilled halloumi", "shawarma-chicken": "chicken shawarma plate", "greek-cod": "baked cod with tomatoes", "chicken-lemon": "roast chicken thighs lemon",
-    "pork-apple": "pork tenderloin sliced", "scallops-butter": "seared scallops", "short-ribs": "braised beef short ribs", "hazelnut-halibut": "halibut fillet dish",
-    "smash-burgers": "cheeseburger", "chimichurri-steak": "steak with chimichurri", "fish-tacos": "fish tacos", "chipotle-shrimp": "grilled shrimp", "enchiladas": "enchiladas"
+    "squash-pasta": "pappardelle", "shrimp-orzo": "orzo pasta dish", "pork-saltimbocca": "saltimbocca alla romana", "sausage-rigatoni": "rigatoni al ragù",
+    "eggplant-parm": "parmigiana di melanzane", "miso-cod": "saikyoyaki grilled fish", "tuna-sesame": "seared tuna sesame", "gochujang-chicken": "korean spicy chicken dish",
+    "green-curry-shrimp": "thai green curry", "mapo-tofu": "mapo tofu", "lamb-harissa": "grilled lamb chops", "cauliflower-romesco": "roasted cauliflower",
+    "halloumi-farro": "grilled halloumi", "shawarma-chicken": "chicken shawarma plate", "greek-cod": "baked cod fillet", "chicken-lemon": "roasted chicken thighs",
+    "pork-apple": "pork tenderloin", "scallops-butter": "seared scallops", "short-ribs": "braised beef short ribs", "hazelnut-halibut": "halibut dish",
+    "smash-burgers": "cheeseburger", "chimichurri-steak": "steak with chimichurri", "fish-tacos": "fish taco", "chipotle-shrimp": "grilled shrimp", "enchiladas": "enchiladas"
   },
   sides: {
-    "s-parsnip": "parsnip puree", "s-smashed": "smashed potatoes", "s-dill-potatoes": "new potatoes with dill", "s-polenta": "polenta", "s-rice": "steamed jasmine rice",
-    "s-cilantro-rice": "cilantro lime rice", "s-couscous": "couscous dish", "s-celery-mash": "celeriac puree", "s-bread": "grilled bread slices", "s-soba": "zaru soba",
+    "s-parsnip": "mashed parsnips", "s-smashed": "crispy roast potatoes", "s-dill-potatoes": "boiled potatoes with dill", "s-polenta": "polenta", "s-rice": "bowl of steamed rice",
+    "s-cilantro-rice": "cilantro lime rice", "s-couscous": "couscous", "s-celery-mash": "celeriac mash", "s-bread": "toasted sourdough bread", "s-soba": "cold soba noodles",
     "s-white-beans": "cannellini beans dish", "s-black-beans": "frijoles negros", "s-corn-puree": "creamed corn", "s-spinach": "sauteed spinach", "s-bokchoy": "bok choy stir fry",
-    "s-broccolini": "broccolini", "s-sprouts": "roasted brussels sprouts", "s-green-beans": "green beans almondine", "s-asparagus": "roasted asparagus", "s-arugula": "arugula salad",
+    "s-broccolini": "broccolini", "s-sprouts": "roasted brussels sprouts", "s-green-beans": "haricots verts dish", "s-asparagus": "roasted asparagus", "s-arugula": "rocket salad parmesan",
     "s-carrots": "roasted carrots", "s-cucumber": "smashed cucumber salad", "s-slaw": "coleslaw", "s-greek-salad": "greek salad", "s-corn": "esquites"
   },
   /* Ingredients are matched by a word in the ingredient's name: [word, search phrase]. */
   ingredients: [
     ["garlic", "garlic bulbs"], ["butter", "butter block"], ["lemon", "lemons fruit"], ["lime", "limes fruit"], ["parsley", "parsley bunch"], ["cilantro", "coriander leaves"],
-    ["shallot", "shallots"], ["parmesan", "parmigiano reggiano cheese"], ["ginger", "ginger root"], ["scallion", "scallions"], ["shrimp", "raw shrimp"], ["tomatoes", "cherry tomatoes"],
-    ["basil", "basil leaves"], ["mint", "mint leaves"], ["thyme", "thyme sprigs"], ["sage", "sage leaves"], ["rosemary", "rosemary sprigs"], ["red onion", "red onion"],
-    ["mushrooms", "cremini mushrooms"], ["fennel", "fennel bulb"], ["prosciutto", "prosciutto"], ["hazelnuts", "hazelnuts"], ["pistachios", "pistachio nuts"], ["arugula", "arugula leaves"],
+    ["shallot", "shallots"], ["parmesan", "parmigiano reggiano cheese"], ["ginger", "fresh ginger rhizome"], ["scallion", "spring onions bunch"], ["shrimp", "raw prawns"], ["tomatoes", "cherry tomatoes"],
+    ["basil", "basil leaves"], ["mint", "mint leaves"], ["thyme", "fresh thyme herb"], ["sage", "sage leaves"], ["rosemary", "rosemary herb"], ["red onion", "red onion"],
+    ["mushrooms", "cremini mushrooms"], ["fennel", "fennel bulb"], ["prosciutto", "prosciutto"], ["hazelnuts", "hazelnuts"], ["pistachios", "pistachio nuts"], ["arugula", "rocket leaves"],
     ["olives", "kalamata olives"], ["feta", "feta cheese"], ["olive oil", "olive oil bottle"], ["honey", "honey jar"], ["sesame seeds", "sesame seeds"], ["soy sauce", "soy sauce"],
-    ["bell pepper", "bell peppers"], ["cucumber", "cucumbers"], ["cabbage", "red cabbage"], ["tortilla", "corn tortillas"], ["black beans", "black turtle beans"], ["rice", "jasmine rice"],
-    ["duck", "raw duck breast"], ["salmon", "salmon fillet raw"], ["mussels", "fresh mussels"], ["scallops", "raw scallops"], ["halloumi", "halloumi cheese"], ["eggplant", "aubergine"],
-    ["tofu", "tofu block"], ["cauliflower", "cauliflower"], ["sweet potato", "sweet potatoes"], ["asparagus", "asparagus spears"], ["Brussels sprouts", "brussels sprouts"],
-    ["bok choy", "bok choy"], ["carrots", "carrots"], ["parsnip", "parsnips"], ["potatoes", "new potatoes"], ["cream", "heavy cream"], ["wine", "wine bottles"], ["cod", "cod fillet"]
+    ["bell pepper", "bell peppers"], ["cucumber", "cucumber vegetable"], ["cabbage", "red cabbage head"], ["tortilla", "corn tortillas"], ["black beans", "black turtle beans"], ["rice", "jasmine rice"],
+    ["duck", "duck breast meat"], ["salmon", "salmon fillet raw"], ["mussels", "blue mussels seafood"], ["scallops", "scallops seafood"], ["halloumi", "halloumi cheese"], ["eggplant", "aubergine"],
+    ["tofu", "tofu"], ["cauliflower", "cauliflower"], ["sweet potato", "sweet potato tubers"], ["asparagus", "asparagus spears"], ["Brussels sprouts", "brussels sprouts"],
+    ["bok choy", "bok choy"], ["carrots", "carrots"], ["parsnip", "parsnip roots"], ["potatoes", "baby potatoes"], ["cream", "heavy cream"], ["wine", "bottle of white wine"], ["cod", "cod fillet"]
   ],
   picks: {}
 };
