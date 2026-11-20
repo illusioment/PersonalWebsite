@@ -35,6 +35,10 @@ window.HUB = {
 
     { name: "Homelab Tracker", desc: "The plan for hosting this site and our files at home: parts, budget, setup checklist and a networking primer.", category: "projects", url: "projects/homelab/", status: "new" },
 
+    // Work tools live in a separate private repository and a password-protected site.
+    // When the site's address is known, add: { name: "Work Site", desc: "Private work tools. Asks for the password.", category: "work", url: "https://YOUR-SITE.netlify.app/", status: "private", external: true },
+    { name: "Work Repo", desc: "The private GitHub repository behind the work site. Only opens if you are signed in to GitHub as the owner.", category: "work", url: "https://github.com/illusioment/PersonalWebsiteWork", status: "private", external: true },
+
     // Copy this line, remove the two slashes, and fill it in:
     // { name: "My App", desc: "What it does in one sentence.", category: "tools", url: "tools/my-app/", status: "new" },
   ]

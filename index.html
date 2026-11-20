@@ -289,11 +289,12 @@ function glyph(name) {
 function card(app, i) {
   const a = el("a", "card");
   a.href = app.url || "#";
+  if (app.external) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
   a.style.setProperty("--i", i);
   const top = el("div", "card-top");
   top.appendChild(glyph(app.name));
   if (app.status) top.appendChild(el("span", "badge mono", app.status));
-  a.append(top, el("h3", null, app.name), el("p", null, app.desc || ""), el("span", "go mono", "Launch"));
+  a.append(top, el("h3", null, app.name), el("p", null, app.desc || ""), el("span", "go mono", app.external ? "Open" : "Launch"));
   a.addEventListener("pointermove", (e) => {
     const r = a.getBoundingClientRect();
     a.style.setProperty("--mx", e.clientX - r.left + "px");
