@@ -105,9 +105,9 @@ const PPI = [
   ["WPU101707", "Cold rolled steel sheet and strip", "steel"], ["WPU1012", "Iron and steel scrap", "steel"],
   ["WPU102502", "Copper and brass mill shapes", "copper"], ["WPU102301", "Copper base scrap", "copper"], ["WPU102501", "Aluminum mill shapes", "aluminum"],
   // Industry indexes that matter to a US sheet and coil distributor. The six digits are the industry's NAICS code.
-  ["PCU423510423510", "Metal service centers (distributor selling prices)", "steel"], ["PCU331110331110", "Iron and steel mills (mill selling prices)", "steel"],
+  ["PCU331110331110", "Iron and steel mills (mill selling prices)", "steel"],
   ["PCU331221331221", "Cold-rolled steel shapes", "steel"], ["PCU332322332322", "Sheet metal work", "steel"],
-  ["PCU331315331315", "Aluminum sheet, plate and foil", "aluminum"], ["PCU331420331420", "Copper rolling, drawing and extruding", "copper"]
+  ["PCU331420331420", "Copper rolling, drawing and extruding", "copper"]
 ];
 const year = new Date().getUTCFullYear();
 let ppiOut = {}, oldLive = {};
@@ -138,7 +138,7 @@ const TICKERS = [
   ["XME", "etf", "all", "SPDR Metals & Mining ETF", "Broad US metals and mining shares"],
   ["TECK", "stocks", "copper", "Teck Resources", "Copper and zinc miner, Canada and Chile"], ["BHP", "stocks", "copper", "BHP", "Largest miner: copper and iron ore"], ["RIO", "stocks", "aluminum", "Rio Tinto", "Iron ore, aluminium and copper"],
   ["VALE", "stocks", "steel", "Vale", "Largest iron ore producer"], ["CMC", "stocks", "steel", "Commercial Metals", "US rebar and scrap recycler"], ["RS", "stocks", "steel", "Reliance", "Largest US metals service centre"],
-  ["RYI", "stocks", "steel", "Ryerson", "US metals service centre: sheet, coil and plate"], ["WS", "stocks", "steel", "Worthington Steel", "US flat-rolled steel processor"], ["CSTM", "stocks", "aluminum", "Constellium", "Aluminium sheet and rolled products"],
+  ["WS", "stocks", "steel", "Worthington Steel", "US flat-rolled steel processor"], ["CSTM", "stocks", "aluminum", "Constellium", "Aluminium sheet and rolled products"],
   ["DBB", "etf", "all", "Invesco DB Base Metals", "Fund tracking copper, aluminium and zinc futures"], ["PICK", "etf", "all", "iShares Global Metals & Mining", "Global diversified miners"],
   ["UUP", "etf", "driver", "US dollar (UUP)", "Dollar index fund. A stronger dollar usually weighs on metals"], ["FXI", "etf", "driver", "China large caps (FXI)", "China shares. China uses about half the world's metal"],
   ["ITB", "etf", "driver", "US homebuilders (ITB)", "Housing is a big user of copper and steel"], ["XLI", "etf", "driver", "US industrials (XLI)", "Manufacturing demand"],
