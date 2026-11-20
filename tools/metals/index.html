@@ -10,7 +10,7 @@
 <style>
 /* A market monitor in the hub's forest palette, set tight like a trading terminal:
    thin-ruled panels, monospaced figures, amber as the working colour.
-   Layout: tape, then signals | chart | snapshot, then the watchlist, the LME
+   Layout: tape, then the daily briefing, signals | chart | snapshot, then the watchlist, the LME
    structure table, correlations, monthly indexes and the news wire.
    Chart series colours (--s1..--s4) are checked for colour-blind separation on the panel. */
 :root {
@@ -160,6 +160,32 @@ details.notes summary { cursor: pointer; font-family: var(--font-mono); font-wei
 details.notes ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); max-width: 90ch; font-size: 13.5px; }
 details.notes li { margin-bottom: 6px; }
 details.notes b { color: var(--text); font-weight: 600; }
+/* daily briefing */
+.brief .headline { font-family: var(--font-display); font-weight: 400; font-size: clamp(18px, 2.2vw, 24px); line-height: 1.25; margin: 0 0 8px; max-width: 40ch; text-wrap: balance; }
+.brief .lede { margin: 0 0 14px; max-width: 110ch; font-size: 14.5px; }
+.brief b { font-weight: 600; }
+.bcols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 22px; border-top: 1px solid var(--line); }
+.bcol { padding: 12px 0 0; }
+.bcol + .bcol { border-left: 1px solid var(--line); padding-left: 22px; }
+.bhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 6px; }
+.bhead button { background: none; border: 0; padding: 0; font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--sun); }
+.bhead button:hover { text-decoration: underline; }
+.bhead .num { font-size: 13px; }
+.bhead .tag { margin: 0 0 0 auto; }
+.bcol p { margin: 0 0 8px; font-size: 13.5px; }
+.bnews { list-style: none; margin: 0; padding: 0; font-size: 12.5px; }
+.bnews li { padding: 4px 0; border-top: 1px solid rgba(31, 68, 56, .6); }
+.bnews a { color: var(--text); text-decoration: none; }
+.bnews a:hover { color: var(--sun); text-decoration: underline; }
+.bnews small { color: var(--muted); }
+.bfoot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 22px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; font-size: 13.5px; }
+.bfoot h3 { font-family: var(--font-mono); font-weight: 500; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.bfoot p { margin: 0; }
+.bfoot ul { margin: 0; padding-left: 18px; }
+.bfoot li button { background: none; border: 0; padding: 0; text-align: left; }
+.bfoot li button:hover b { color: var(--sun); }
+.bfoot li span { color: var(--muted); }
+@media (max-width: 900px) { .bcols, .bfoot { grid-template-columns: minmax(0, 1fr); } .bcol + .bcol { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); margin-top: 6px; } .bfoot > div + div { margin-top: 12px; } }
 .state { padding: 44px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; margin-top: 12px; }
 footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; max-width: 100ch; }
 footer p { margin: 0 0 6px; }
@@ -408,6 +434,86 @@ function signals() {
   state.ins.filter((i) => i.freq === "m").forEach((i) => { const y = i.st.y1; if (y != null && Math.abs(y) > 0.2) push(2, i, i.short + " " + (y > 0 ? "up " : "down ") + absPct(y) + " on the year", "index at " + i.st.last.toFixed(1) + " in " + monthS(i.st.date)); });
   return out.sort((a, b) => b.w - a.w).slice(0, 14);
 }
+/* ---------- daily briefing: sentences written from the latest session's numbers ---------- */
+const WORDS = { past: ["was little changed", "edged up", "slipped", "rose", "fell", "jumped", "slid"], one: ["is little changed", "edges up", "slips", "rises", "falls", "jumps", "slides"], many: ["are little changed", "edge up", "slip", "rise", "fall", "jump", "slide"], pastMany: ["were little changed", "edged up", "slipped", "rose", "fell", "jumped", "slid"] };
+function moved(v, form, small = 0.003) {
+  const a = Math.abs(v), w = WORDS[form];
+  if (a < small) return w[0];
+  const k = a < small * 3.4 ? 1 : a < small * 8.4 ? 3 : 5;
+  return w[k + (v < 0 ? 1 : 0)] + " " + absPct(v);
+}
+function trendOf(s) {
+  if (s.s50 == null || s.s200 == null) return null;
+  const a = s.last >= s.s50, b = s.last >= s.s200;
+  return a && b ? ["Uptrend", "above both its 50-day and 200-day averages, so the uptrend is intact"] : !a && !b ? ["Downtrend", "below both its 50-day and 200-day averages, so the trend is down"]
+    : b ? ["Pullback", "below its 50-day average but still above the 200-day: a pullback inside a longer uptrend"] : ["Rebound", "back above its 50-day average but still under the 200-day: a rebound inside a longer downtrend"];
+}
+function briefing() {
+  const by = state.byId, daily = state.ins.filter((i) => i.freq === "d" && i.st.d1 != null);
+  const sharesOf = (g) => daily.filter((i) => i.group === g && !i.lme), avg = (l) => l.length ? l.reduce((a, i) => a + i.st.d1, 0) / l.length : null;
+  const lme = daily.filter((i) => i.lme), eq = daily.filter((i) => !i.lme);
+  const lmeDate = lme.length ? lme[0].st.date : null, eqDate = eq.length ? eq[0].st.date : null;
+  const shareNote = lmeDate && eqDate && eqDate !== lmeDate ? " on " + dayS(eqDate) : "";
+  const newsFor = (m) => ((state.data.news || {})[m] || []).slice().sort((a, b) => (a.d < b.d ? 1 : -1)).slice(0, 2);
+  const blocks = [];
+  [["LME:CU", "copper", "Copper"], ["LME:AL", "aluminum", "Aluminium"]].forEach(([id, g, label]) => {
+    const i = by[id]; if (!i || i.st.d1 == null) return;
+    const s = i.st, t = trendOf(s), ps = [], sh = sharesOf(g), a = avg(sh);
+    let p1 = "LME " + label.toLowerCase() + " " + moved(s.d1, "past") + (Math.abs(s.d1) < 0.003 ? " at " : " to ") + usd(s.last) + " a tonne (" + usd(s.last / LB, 2) + "/lb). That leaves it " + pct(s.w1) + " on the week and " + pct(s.ytd) + " this year.";
+    if (s.dvol && Math.abs(s.d1) > 2 * s.dvol) p1 += " The day's move was about " + (Math.abs(s.d1) / s.dvol).toFixed(1) + " times its usual swing.";
+    ps.push(p1);
+    if (t) ps.push("Price is " + t[1] + ".");
+    const sp = lastRow(i.spread), st = lastRow(i.stock), stW = chg(i.stock, 5);
+    if (sp) ps.push("Cash is " + usd(Math.abs(sp[1])) + (sp[1] >= 0 ? " above 3-month (backwardation), a sign nearby metal is tight" : " below 3-month (contango), a sign nearby metal is plentiful") + (st ? "; LME stocks are " + n0(st[1]) + " tonnes, " + (stW == null || Math.abs(stW) < 0.005 ? "flat" : pct(stW)) + " on the week." : "."));
+    if (a != null) { const top = sh.slice().sort((x, y) => Math.abs(y.st.d1) - Math.abs(x.st.d1))[0]; ps.push(label + " shares " + moved(a, "pastMany") + " on average" + shareNote + "; " + top.name.split(/[ (]/)[0] + " (" + top.sym + ") moved most at " + pct(top.st.d1) + "."); }
+    blocks.push({ id, label, fig: usd(s.last), d1: s.d1, tag: t && t[0], ps, news: newsFor(g) });
+  });
+  const steel = sharesOf("steel"), sa = avg(steel), slx = by.SLX;
+  if (sa != null) {
+    const ord = steel.slice().sort((x, y) => y.st.d1 - x.st.d1), ps = [], t = slx ? trendOf(slx.st) : null;
+    ps.push("There is no free daily steel price, so steelmaker shares stand in. They " + moved(sa, "past").replace("was ", "were ") + " on average" + shareNote + ", from " + ord[0].sym + " at " + pct(ord[0].st.d1) + " to " + ord[ord.length - 1].sym + " at " + pct(ord[ord.length - 1].st.d1) + ".");
+    if (slx) ps.push("The steel producers fund (SLX) is " + pct(slx.st.m1) + " on the month and " + pct(slx.st.ytd) + " this year" + (t ? "; it is " + t[1] + "." : "."));
+    const mill = state.ins.find((i) => i.freq === "m" && /steel mill/i.test(i.name)), scrap = state.ins.find((i) => i.freq === "m" && /scrap/i.test(i.name) && i.group === "steel");
+    const bits = [mill && "steel mill products " + pct(mill.st.y1) + " on the year", scrap && "steel scrap " + pct(scrap.st.y1)].filter(Boolean);
+    if (bits.length) ps.push("Latest US producer prices (" + monthS((mill || scrap).st.date) + "): " + bits.join(", ") + ".");
+    blocks.push({ id: slx ? "SLX" : steel[0].id, label: "Steel", fig: slx ? "SLX " + usd(slx.st.last, 2) : "", d1: slx ? slx.st.d1 : sa, tag: t && t[0], ps, news: newsFor("steel") });
+  }
+  const cu = by["LME:CU"], al = by["LME:AL"], parts = [];
+  if (cu && cu.st.d1 != null) parts.push("Copper " + moved(cu.st.d1, "one"));
+  if (al && al.st.d1 != null) parts.push("aluminium " + moved(al.st.d1, "one"));
+  if (sa != null) parts.push("steel shares " + moved(sa, "many"));
+  const headline = parts.length > 2 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts.join(" and ");
+  let lede = "";
+  if (lme.length > 2) {
+    const ord = lme.slice().sort((x, y) => y.st.d1 - x.st.d1), up = lme.filter((i) => i.st.d1 > 0).length, n = lme.length;
+    lede = (up === n ? "All " + n + " LME base metals rose" : up === 0 ? "All " + n + " LME base metals fell" : up + " of " + n + " LME base metals rose") + " in the " + dayS(lmeDate) + " session; " + ord[0].short.toLowerCase() + " did best (" + pct(ord[0].st.d1) + ") and " + ord[n - 1].short.toLowerCase() + " worst (" + pct(ord[n - 1].st.d1) + ").";
+  }
+  const dr = [["UUP", "the dollar"], ["FXI", "Chinese shares"], ["SPY", "US shares"], ["USO", "oil"]].filter(([k]) => by[k] && by[k].st.d1 != null).map(([k, nm]) => nm + " " + moved(by[k].st.d1, nm.endsWith("shares") ? "pastMany" : "past", k === "UUP" ? 0.0015 : 0.003));
+  let backdrop = dr.length ? dr.join(", ").replace(/^./, (c) => c.toUpperCase()) + shareNote + "." : "";
+  const usd1 = by.UUP && by.UUP.st.d1;
+  if (usd1 != null && Math.abs(usd1) >= 0.0015) backdrop += usd1 > 0 ? " A firmer dollar is a headwind for metals, which are priced in dollars." : " A softer dollar is a tailwind for metals, which are priced in dollars.";
+  return { headline, lede, blocks, backdrop, watch: signals().slice(0, 4), date: [lmeDate, eqDate].filter(Boolean).sort().pop() };
+}
+function briefPanel() {
+  const b = briefing(), p = el("section", "panel brief"), ph = el("div", "ph");
+  ph.append(el("h2", null, "Daily briefing"), el("small", null, (b.date ? new Date(b.date + "T12:00:00").toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }) + " close · " : "") + "written automatically from the numbers below"));
+  p.append(ph, el("p", "headline", b.headline + "."));
+  if (b.lede) p.appendChild(el("p", "lede", b.lede));
+  const cols = el("div", "bcols");
+  b.blocks.forEach((k) => {
+    const c = el("div", "bcol"), h = el("div", "bhead"), nm = el("button", null, k.label); nm.type = "button"; nm.title = "Open " + k.label + " in the chart"; nm.addEventListener("click", () => select(k.id, true));
+    const fig = el("span", "num", k.fig + " "); fig.appendChild(delta(k.d1)); h.append(nm, fig); if (k.tag) h.appendChild(el("span", "tag", k.tag));
+    c.appendChild(h); k.ps.forEach((t) => c.appendChild(el("p", null, t)));
+    if (k.news.length) { const ul = el("ul", "bnews"); k.news.forEach((n) => { const li = el("li"), a = el("a", null, n.t); a.href = /^https?:\/\//.test(n.u) ? n.u : "#"; a.target = "_blank"; a.rel = "noopener noreferrer"; li.append(a, el("small", null, " · " + (n.s ? n.s + ", " : "") + ago(n.d))); ul.appendChild(li); }); c.appendChild(ul); }
+    cols.appendChild(c);
+  });
+  p.appendChild(cols);
+  const foot = el("div", "bfoot"), d1 = el("div"), d2 = el("div");
+  if (b.backdrop) { d1.append(el("h3", null, "Backdrop"), el("p", null, b.backdrop)); foot.appendChild(d1); }
+  if (b.watch.length) { const ul = el("ul"); b.watch.forEach((s) => { const li = el("li"), bt = el("button"); bt.type = "button"; bt.append(el("b", null, s.head), el("span", null, " · " + s.text)); bt.addEventListener("click", () => select(s.id, true)); li.appendChild(bt); ul.appendChild(li); }); d2.append(el("h3", null, "What to watch"), ul); foot.appendChild(d2); }
+  if (foot.children.length) p.appendChild(foot);
+  return p;
+}
 function signalsPanel() {
   const p = el("section", "panel signals"), ph = el("div", "ph"), list = signals(), ul = el("ul", "sig");
   ph.append(el("h2", null, "Signals"), el("small", null, list.length + " flagged")); p.appendChild(ph);
@@ -608,6 +714,7 @@ function render() {
   main.textContent = "";
   if (!state.byId[state.sel]) state.sel = state.ins[0].id;
   renderTape();
+  main.appendChild(briefPanel());
   const g3 = el("div", "grid3"); g3.append(signalsPanel(), chartPanel(), snapshotPanel()); main.appendChild(g3);
   main.appendChild(watchlist());
   const g2 = el("div", "grid2"); g2.append(structurePanel(), corrPanel()); main.appendChild(g2);
