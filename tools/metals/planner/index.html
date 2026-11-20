@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supply Planner · Metals Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Supply Planner: the physical side of the Metals Desk, in the same terminal look.
+   Four views behind the tab row: a world map of mines, plants, ports and trade
+   routes; a landed-cost calculator; a sourcing plan that ranks origins; and a
+   playbook of how importers work today. Content lives in atlas.js.
+   Chart colours (--s1..--s4) are the Desk's colour-blind-checked set. */
+:root {
+  --bg: #04110E; --panel: #0B1F1A; --line: #1F4438; --text: #E4F2E6; --muted: #8FB0A1;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --s1: #BF8A12; --s2: #4A90C9; --s3: #C95F9A; --s4: #3FA36C;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-weight: 300; font-size: 14.5px; line-height: 1.5; }
+.wrap { max-width: 1480px; margin: 0 auto; padding: 0 16px 48px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 1px; }
+.mono { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--leaf); }
+b { font-weight: 600; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.top a.back { color: var(--muted); text-decoration: none; }
+.top a.back:hover { color: var(--leaf); }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: .04em; color: var(--sun); }
+.stamp { color: var(--muted); margin-left: auto; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 4; }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 5px 11px; color: var(--muted); font-size: 12.5px; text-decoration: none; }
+.btn:hover, .btn[aria-pressed="true"] { border-color: var(--sun); color: var(--sun); }
+.tabs .btn[aria-pressed="true"] { background: var(--sun); color: #1A1400; font-weight: 600; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; margin-top: 12px; }
+.ph { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+h2 { font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--sun); margin: 0; }
+h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 4px; }
+.ph small, .sub { color: var(--muted); font-size: 12.5px; }
+.sub { margin: 0 0 10px; max-width: 100ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 12px; }
+.grid > .panel { margin-top: 12px; }
+.grid > div { min-width: 0; }
+.warn { color: var(--down); }
+.good { color: var(--leaf); }
+
+/* map */
+.mapbox { position: relative; background: #061712; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; touch-action: none; cursor: grab; }
+.mapbox.drag { cursor: grabbing; }
+.mapbox svg { display: block; width: 100%; height: auto; }
+.land { stroke: #0B1F1A; stroke-width: .5; vector-effect: non-scaling-stroke; }
+.land:hover { stroke: var(--text); stroke-width: 1; }
+.flow { fill: none; stroke: var(--leaf); stroke-linecap: round; opacity: .55; vector-effect: non-scaling-stroke; }
+.flow:hover { opacity: 1; }
+.site { cursor: pointer; }
+.site .shape { stroke: #04110E; vector-effect: non-scaling-stroke; stroke-width: 1; }
+.site:hover .shape, .site.on .shape { stroke: #fff; stroke-width: 2; }
+.dest { fill: none; stroke: var(--leaf); vector-effect: non-scaling-stroke; stroke-width: 2; }
+.maptools { position: absolute; right: 8px; top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.maptools .btn { background: rgba(4, 17, 14, .85); width: 30px; padding: 3px 0; text-align: center; font-size: 15px; }
+.tip { position: fixed; pointer-events: none; z-index: 30; background: #06140F; border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; font-size: 12.5px; max-width: 260px; }
+.tip b { display: block; }
+.tip span { color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 18px; color: var(--muted); font-size: 12.5px; margin-top: 10px; align-items: center; }
+.legend svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.ramp { display: inline-flex; align-items: center; gap: 6px; }
+.ramp span { display: inline-block; width: 90px; height: 8px; border-radius: 2px; background: linear-gradient(90deg, rgba(200, 228, 214, .14), rgba(200, 228, 214, .64)); }
+.card h3 { font-family: var(--font-display); font-weight: 400; font-size: 17px; }
+.card .meta { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 6px 0; border-bottom: 1px solid rgba(31, 68, 56, .7); font-size: 13px; }
+.rows li:last-child { border-bottom: 0; }
+.rows .meter { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: rgba(143, 176, 161, .18); }
+.rows .meter i { display: block; height: 100%; border-radius: 3px; background: var(--sun); }
+.rows small { color: var(--muted); }
+.sitelist { columns: 3 220px; column-gap: 24px; }
+.sitelist button { break-inside: avoid; }
+.sitelist button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid rgba(31, 68, 56, .7); padding: 6px 0; font-size: 13px; display: flex; justify-content: space-between; gap: 10px; }
+.sitelist button:hover { color: var(--sun); }
+.sitelist small { color: var(--muted); }
+
+/* forms and tables */
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px 14px; }
+.form label { display: block; color: var(--muted); font-size: 12.5px; }
+.form input, .form select { display: block; width: 100%; margin-top: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 9px; color: var(--text); font-size: 13.5px; }
+.form input { font-family: var(--font-mono); }
+.form .hint { display: block; font-size: 11.5px; margin-top: 2px; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 6px 10px 6px 0; border-bottom: 1px solid rgba(31, 68, 56, .6); vertical-align: middle; }
+th.r, td.r { text-align: right; font-family: var(--font-mono); white-space: nowrap; }
+tr.total td { border-top: 1px solid var(--line); font-weight: 600; }
+tr.dom td { color: var(--leaf); }
+td small { color: var(--muted); display: block; }
+.big { font-family: var(--font-mono); font-size: 28px; font-weight: 500; line-height: 1.1; }
+.kpis { display: flex; flex-wrap: wrap; gap: 10px 32px; margin-bottom: 12px; }
+.kpis .k { color: var(--muted); }
+.stack { display: flex; height: 16px; gap: 2px; min-width: 120px; }
+.stack i { display: block; height: 100%; border-radius: 2px; }
+.stack i:first-child { border-radius: 4px 2px 2px 4px; } .stack i:last-child { border-radius: 2px 4px 4px 2px; }
+.tag { display: inline-block; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; margin: 2px 4px 0 0; color: var(--muted); cursor: help; }
+.verdict { border-left: 2px solid var(--sun); padding-left: 12px; margin: 12px 0 0; max-width: 100ch; }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 10px 0; }
+.split > div { border: 1px solid var(--line); border-radius: 4px; padding: 10px 12px; }
+.split .pct { font-family: var(--font-display); font-size: 22px; color: var(--sun); }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+.cols > .panel { margin-top: 0; }
+.prose p { margin: 0 0 9px; max-width: 95ch; }
+.moves { margin: 0; padding: 0; list-style: none; }
+.moves li { padding: 8px 0; border-bottom: 1px solid rgba(31, 68, 56, .7); }
+.moves li:last-child { border-bottom: 0; }
+.moves b { display: block; }
+.moves span { color: var(--muted); font-size: 13.5px; }
+ul.plain { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; }
+ul.plain li { margin-bottom: 4px; }
+.state { padding: 44px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; margin-top: 12px; }
+footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; max-width: 110ch; }
+footer p { margin: 0 0 6px; }
+@media (max-width: 1000px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .wrap { padding: 0 10px 40px; } .stamp { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back mono" href="../">← Metals Desk</a>
+    <span class="brand">SUPPLY PLANNER</span>
+    <span class="stamp mono" id="stamp"></span>
+  </header>
+  <div class="bar">
+    <div class="seg tabs" id="tabs" role="tablist"></div>
+    <div class="seg" id="metals" role="group" aria-label="Metal"></div>
+  </div>
+  <main id="main"><div class="state">Loading the map and prices…</div></main>
+  <footer>
+    <p><b>Read this first.</b> Everything here is a planning estimate. Site locations are approximate, output and import shares are round numbers at roughly 2024 levels, and freight, premiums and export prices are ballparks you should overwrite with real quotes. Trade rules were checked in <span id="checked"></span> and change often; sources disagree on some details. Confirm duty rates and classification with a licensed customs broker before committing money. This is not legal, customs or financial advice.</p>
+    <p>LME prices come from the Metals Desk data. Country outlines are from the public-domain world.geo.json project.</p>
+  </footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script src="atlas.js"></script>
+<script>
+"use strict";
+const A = window.ATLAS, $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const SVG = "http://www.w3.org/2000/svg", sv = (tag, attrs) => { const n = document.createElementNS(SVG, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); return n; };
+const usd = (v, d = 0) => (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const LB = 2204.62, ST = 1.10231;
+const METALS = [["copper", "Copper"], ["aluminium", "Aluminium"], ["steel", "Steel"]], MCOL = { copper: "var(--s1)", aluminium: "var(--s2)", steel: "var(--s3)", all: "#E4F2E6" };
+const VIEWS = [["map", "Map"], ["cost", "Landed cost"], ["plan", "Sourcing plan"], ["playbook", "Playbook"]];
+const PARTS = [["metal", "Metal at origin", "var(--s1)"], ["freight", "Freight and handling", "var(--s2)"], ["duty", "Duties and fees", "var(--s3)"], ["inland", "Inland and finance", "var(--s4)"]];
+const MW = 1000, LAT0 = 80, LAT1 = -58, MH = (LAT0 - LAT1) / 360 * MW;
+const px = (lon) => (lon + 180) / 360 * MW, py = (lat) => (LAT0 - lat) / 360 * MW;
+const S = { view: "map", metal: "copper", dest: "pnw", vb: [0, 0, MW, MH], site: null, world: null, lme: {}, lmeDate: "",
+  cost: { origin: null, tons: 500, miles: 50, mode: "truck", over: {} }, plan: { tons: 500, miles: 50, mode: "truck", scenario: "now" } };
+const product = () => A.products.find((p) => p.metal === S.metal);
+const dest = () => A.dests.find((d) => d[0] === S.dest);
+const tip = $("tip");
+function showTip(ev, head, text) { tip.textContent = ""; tip.append(el("b", null, head)); if (text) tip.append(el("span", null, text)); tip.hidden = false; const x = Math.min(innerWidth - 270, ev.clientX + 14), y = ev.clientY + 16; tip.style.left = Math.max(4, x) + "px"; tip.style.top = (y + 80 > innerHeight ? ev.clientY - 70 : y) + "px"; }
+const hideTip = () => { tip.hidden = true; };
+
+/* ---------- the cost model ---------- */
+function basePrice(p) { if (typeof p.base === "number") return p.base; const k = p.base.split(":")[1]; return S.lme[k] || 0; }
+/* Defaults for one origin and destination; "over" holds anything the user typed. */
+function inputs(p, o, d, opt) {
+  const lane = A.lanes[o[3]], coast = d[2], land = !!lane.land, f = A.fees;
+  const seaCoast = coast === "mw" && !land ? "gulf" : coast; // sea cargo for the Midwest lands on the Gulf and goes up by barge or rail
+  let s232 = o[8];
+  if (opt.scenario && opt.scenario !== "now") { const sc = +opt.scenario; if (p.id === "cathode") s232 = sc; else if (!o[10].includes("blocked")) s232 = o[10].includes("uk") ? Math.min(25, sc) : sc; }
+  const base = { price: (opt.base != null && typeof p.base === "number" ? opt.base : basePrice(p)) + (typeof p.base === "number" ? 0 : p.premium) + o[6], freight: lane.freight[seaCoast], days: lane.days[seaCoast], mfn: o[7], s232, other: 0,
+    handling: land ? 8 : f.handling, insurance: f.insurancePct, finance: f.financePct, miles: opt.miles + (coast === "mw" && !land ? 900 : 0), mode: coast === "mw" && !land && opt.mode === "truck" ? "barge" : opt.mode, tons: opt.tons, sea: !land };
+  return Object.assign(base, opt.over || {});
+}
+function landed(i) {
+  const f = A.fees, value = i.price, ins = value * i.insurance / 100;
+  const mpf = Math.min(f.mpfMax, Math.max(f.mpfMin, value * i.tons * f.mpfPct / 100)) / Math.max(1, i.tons), hmf = i.sea ? value * f.hmfPct / 100 : 0;
+  const duty = value * (i.mfn + i.s232 + i.other) / 100, inl = i.miles * A.inland[i.mode][1], fin = (value + duty) * i.finance / 100 * (i.days + f.termsDays) / 365;
+  const lines = [["Metal at origin", value, "metal"], ["Freight to the US", i.freight, "freight"], ["Insurance", ins, "freight"], ["Port handling and broker", i.handling + f.broker, "freight"],
+    ["Normal duty (" + i.mfn + "%)", value * i.mfn / 100, "duty"], ["Section 232 duty (" + i.s232 + "%)", value * i.s232 / 100, "duty"], ["Other duties (" + i.other + "%)", value * i.other / 100, "duty"], ["Customs and harbour fees", mpf + hmf, "duty"],
+    ["Inland freight (" + Math.round(i.miles) + " mi by " + A.inland[i.mode][0].toLowerCase() + ")", inl, "inland"], ["Financing (" + (i.days + f.termsDays) + " days at " + i.finance + "%)", fin, "inland"]];
+  const parts = { metal: 0, freight: 0, duty: 0, inland: 0 }; lines.forEach((l) => { parts[l[2]] += l[1]; });
+  return { lines, parts, total: lines.reduce((a, l) => a + l[1], 0), days: i.days };
+}
+function domestic(p, opt) { const d = p.domestic, v = d.set != null ? d.set : basePrice(p) + d.add; return (opt && opt.dom != null ? opt.dom : v) + (opt ? opt.miles * A.inland[opt.mode][1] : 0); }
+function stackBar(parts, max) { const s = el("div", "stack"); s.style.width = Math.max(8, Object.values(parts).reduce((a, b) => a + b, 0) / max * 100) + "%"; PARTS.forEach(([k, label, col]) => { if (parts[k] <= 0) return; const i = el("i"); i.style.flex = parts[k] + " 0 0"; i.style.background = col; i.title = label + ": " + usd(parts[k]) + " a tonne"; s.appendChild(i); }); return s; }
+function partsLegend() { const l = el("div", "legend"); PARTS.forEach(([, label, col]) => { const s = el("span"), i = el("i"); i.style.background = col; s.append(i, label); l.appendChild(s); }); return l; }
+function field(label, value, onChange, opts = {}) {
+  const lab = el("label", null, label), inp = el(opts.options ? "select" : "input");
+  if (opts.options) opts.options.forEach(([v, t]) => { const o = el("option", null, t); o.value = v; inp.appendChild(o); }); else { inp.type = "number"; inp.step = opts.step || "1"; if (opts.min != null) inp.min = opts.min; }
+  inp.value = value; inp.addEventListener("change", () => onChange(opts.options ? inp.value : parseFloat(inp.value))); lab.appendChild(inp);
+  if (opts.hint) lab.appendChild(el("span", "hint", opts.hint)); return lab;
+}
+const destField = () => field("Deliver to", S.dest, (v) => { S.dest = v; S.cost.over = {}; render(); }, { options: A.dests.map((d) => [d[0], d[1]]) });
+const modeOpts = Object.entries(A.inland).map(([k, v]) => [k, v[0]]);
+
+/* ---------- map ---------- */
+function shape(kind, x, y, r, col) {
+  if (kind === "mine") return sv("path", { class: "shape", d: `M${x} ${y - r * 1.15}L${x + r} ${y + r * .8}L${x - r} ${y + r * .8}Z`, fill: col });
+  if (kind === "port") return sv("path", { class: "shape", d: `M${x} ${y - r}L${x + r} ${y}L${x} ${y + r}L${x - r} ${y}Z`, fill: col });
+  return sv("circle", { class: "shape", cx: x, cy: y, r: r * .9, fill: col });
+}
+function mapView(main) {
+  const p = product(), sh = A.shares[S.metal], d = dest(), grid = el("div", "grid"), left = el("section", "panel"), right = el("div");
+  const ph = el("div", "ph"); ph.append(el("h2", null, "Where " + S.metal + " comes from, and how it reaches the US"), el("small", null, "Drag to move · buttons to zoom · click a marker")); left.appendChild(ph);
+  const tools = el("div", "form"); tools.style.marginBottom = "10px"; tools.append(destField());
+  const regions = el("label", null, "Jump to"), rs = el("div", "seg"); rs.style.marginTop = "3px";
+  [["World", [0, 0, MW, MH]], ["North America", [100, 50, 290, 111]], ["South America", [130, 205, 480, 184]], ["Europe, Africa, Middle East", [440, 40, 280, 300]], ["Asia-Pacific", [680, 70, 320, 290]], ["United States", [150, 85, 190, 85]]].forEach(([n, vb]) => { const b = el("button", "btn", n); b.type = "button"; b.addEventListener("click", () => { S.vb = vb.slice(); drawOverlay(); }); rs.appendChild(b); });
+  regions.appendChild(rs); regions.style.gridColumn = "span 3"; tools.appendChild(regions); left.appendChild(tools);
+
+  const box = el("div", "mapbox"), svg = sv("svg", { role: "img", "aria-label": "World map of " + S.metal + " mines, plants, ports and trade routes" }), gl = sv("g", {}), go = sv("g", {});
+  const maxShare = Math.max(...Object.values(sh.v));
+  S.world.c.forEach(([id, name, polys]) => {
+    const share = sh.v[id] || 0, dstr = polys.map((f) => { let s = ""; for (let i = 0; i < f.length; i += 2) s += (i ? "L" : "M") + px(f[i] / 10).toFixed(1) + " " + py(f[i + 1] / 10).toFixed(1); return s + "Z"; }).join("");
+    const path = sv("path", { class: "land", d: dstr, fill: share ? `rgba(200,228,214,${(0.14 + 0.5 * Math.sqrt(share / maxShare)).toFixed(3)})` : "#123027" });
+    path.addEventListener("pointermove", (ev) => showTip(ev, name, share ? sh.label + ": about " + share + "%" : "")); path.addEventListener("pointerleave", hideTip); gl.appendChild(path);
+  });
+  svg.append(gl, go); box.appendChild(svg);
+  const mt = el("div", "maptools"); [["+", .7], ["−", 1.43], ["⟲", 0]].forEach(([t, k]) => { const b = el("button", "btn", t); b.type = "button"; b.setAttribute("aria-label", k === 0 ? "Reset map" : k < 1 ? "Zoom in" : "Zoom out"); b.addEventListener("click", () => { if (!k) S.vb = [0, 0, MW, MH]; else zoom(k); drawOverlay(); }); mt.appendChild(b); });
+  box.appendChild(mt); left.appendChild(box);
+  function clampVb() { const v = S.vb; v[2] = Math.max(60, Math.min(MW, v[2])); v[3] = v[2] * MH / MW; v[0] = Math.max(0, Math.min(MW - v[2], v[0])); v[1] = Math.max(0, Math.min(MH - v[3], v[1])); }
+  function zoom(k) { const v = S.vb, cx = v[0] + v[2] / 2, cy = v[1] + v[3] / 2; v[2] *= k; v[3] = v[2] * MH / MW; v[0] = cx - v[2] / 2; v[1] = cy - v[3] / 2; }
+  function drawOverlay() {
+    clampVb(); svg.setAttribute("viewBox", S.vb.join(" ")); go.textContent = ""; const k = S.vb[2] / MW;
+    const dx = px(d[4]), dy = py(d[3]);
+    p.origins.forEach((o) => { // trade routes: width follows the share of US imports
+      if (o[10].includes("blocked") || !o[9]) return; let ox = px(o[5]), oy = py(o[4]);
+      const draw = (x1, y1, x2, y2) => { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - Math.abs(x2 - x1) * .18 - 8, path = sv("path", { class: "flow", d: `M${x1} ${y1}Q${mx} ${my} ${x2} ${y2}`, "stroke-width": Math.max(1.2, Math.sqrt(o[9]) * 1.1) });
+        path.addEventListener("pointermove", (ev) => showTip(ev, o[1] + " → " + d[1], "About " + o[9] + "% of US " + p.name.toLowerCase() + " imports before the 2025 tariffs. " + A.lanes[o[3]].name + ".")); path.addEventListener("pointerleave", hideTip); go.appendChild(path); };
+      if (Math.abs(ox - dx) > MW / 2) { draw(ox, oy, dx + MW, dy); draw(ox - MW, oy, dx, dy); } else draw(ox, oy, dx, dy);
+    });
+    go.appendChild(sv("circle", { class: "dest", cx: dx, cy: dy, r: 7 * k }));
+    A.sites.filter((s) => s[2] === S.metal || s[2] === "all").sort((a, b) => b[7] - a[7]).forEach((s) => {
+      const g = sv("g", { class: "site" + (S.site === s ? " on" : ""), tabindex: 0, role: "button", "aria-label": s[0] + ", " + s[5] }), r = (2.4 + s[7] * 1.1) * Math.max(.3, Math.min(1, k + .2));
+      g.appendChild(shape(s[1], px(s[4]), py(s[3]), r, MCOL[s[2]]));
+      g.addEventListener("pointermove", (ev) => showTip(ev, s[0], s[5] + (s[6] ? " · " + s[6] : ""))); g.addEventListener("pointerleave", hideTip);
+      const pick = () => { S.site = s; drawOverlay(); drawCard(); }; g.addEventListener("click", pick); g.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(); } });
+      go.appendChild(g);
+    });
+  }
+  let drag = null;
+  box.addEventListener("pointerdown", (ev) => { if (ev.target.closest(".maptools,.site")) return; drag = [ev.clientX, ev.clientY]; box.setPointerCapture(ev.pointerId); box.classList.add("drag"); });
+  box.addEventListener("pointermove", (ev) => { if (!drag) return; const r = box.getBoundingClientRect(), k = S.vb[2] / r.width; S.vb[0] -= (ev.clientX - drag[0]) * k; S.vb[1] -= (ev.clientY - drag[1]) * k; drag = [ev.clientX, ev.clientY]; clampVb(); svg.setAttribute("viewBox", S.vb.join(" ")); });
+  ["pointerup", "pointercancel"].forEach((n) => box.addEventListener(n, () => { drag = null; box.classList.remove("drag"); }));
+
+  const lg = el("div", "legend"), key = (kind, text) => { const s = el("span"), i = sv("svg", { viewBox: "0 0 14 14" }); i.appendChild(shape(kind, 7, 7, 5.5, MCOL[S.metal])); s.append(i, text); return s; };
+  const pk = el("span"), pi = sv("svg", { viewBox: "0 0 14 14" }); pi.appendChild(shape("port", 7, 7, 5.5, MCOL.all)); pk.append(pi, "Port or border crossing");
+  const rk = el("span", "ramp"); rk.append("Lighter", el("span"), "larger share of world output");
+  const fk = el("span"), fi = sv("svg", { viewBox: "0 0 14 14" }); fi.appendChild(sv("path", { d: "M1 11Q7 0 13 11", fill: "none", stroke: "var(--leaf)", "stroke-width": 2 })); fk.append(fi, "Route to the US; thicker carries more");
+  lg.append(key("mine", S.metal === "steel" ? "Iron ore mine" : S.metal === "aluminium" ? "Bauxite mine" : "Mine"), key("plant", S.metal === "steel" ? "Steel mill" : "Smelter or refinery"), pk, fk, rk); left.appendChild(lg);
+
+  const card = el("section", "panel card"), flows = el("section", "panel"), list = el("section", "panel");
+  function drawCard() {
+    card.textContent = ""; const s = S.site;
+    if (!s) { card.append(el("h2", null, "Site details"), el("p", "sub", "Click any marker on the map, or a name in the list below.")); card.lastChild.style.marginTop = "8px"; return; }
+    card.append(el("h2", null, s[1] === "mine" ? "Mine" : s[1] === "port" ? "Port" : S.metal === "steel" ? "Steel mill" : "Smelter or refinery"), el("h3", null, s[0]), el("p", "meta", s[5] + (s[6] ? " · " + s[6] : "")), el("p", null, s[8])); card.children[1].style.marginTop = "8px"; card.lastChild.style.margin = "0";
+  }
+  flows.append(el("h2", null, "Where US imports come from")); const fs = el("p", "sub", p.name + ". Rough shares before the 2025 tariffs; duty is the Section 232 rate today."); fs.style.marginTop = "6px"; flows.appendChild(fs);
+  const ul = el("ul", "rows"), maxS = Math.max(...p.origins.map((o) => o[9]));
+  p.origins.filter((o) => o[9] > 0).sort((a, b) => b[9] - a[9]).forEach((o) => { const li = el("li"), m = el("div", "meter"), i = el("i"); i.style.width = o[9] / maxS * 100 + "%"; m.appendChild(i); const r = el("span", "num", "~" + o[9] + "%"); li.append(el("span", null, o[1]), r, m); const sm = el("small", null, (o[8] ? o[8] + "% duty" : "no Section 232 duty") + " · " + A.lanes[o[3]].name); sm.style.gridColumn = "1 / -1"; li.appendChild(sm); ul.appendChild(li); });
+  flows.appendChild(ul);
+  list.append(el("h2", null, "Sites on the map")); const sl = el("div", "sitelist"); sl.style.marginTop = "8px";
+  A.sites.filter((s) => s[2] === S.metal).sort((a, b) => b[7] - a[7] || a[0].localeCompare(b[0])).forEach((s) => { const b = el("button"); b.type = "button"; b.append(el("span", null, s[0]), el("small", null, s[5])); b.addEventListener("click", () => { S.site = s; const w = Math.min(S.vb[2], 300); S.vb = [px(s[4]) - w / 2, py(s[3]) - w * MH / MW / 2, w, w * MH / MW]; drawOverlay(); drawCard(); box.scrollIntoView({ block: "nearest", behavior: "smooth" }); }); sl.appendChild(b); });
+  list.appendChild(sl);
+  const leftCol = el("div"); leftCol.append(left, list); right.append(card, flows); grid.append(leftCol, right); main.appendChild(grid);
+  if (S.site && S.site[2] !== S.metal && S.site[2] !== "all") S.site = null;
+  drawOverlay(); drawCard();
+}
+
+/* ---------- landed cost ---------- */
+function costView(main) {
+  const p = product(), d = dest(), c = S.cost; if (!p.origins.some((o) => o[0] === c.origin)) { c.origin = p.origins[0][0]; c.over = {}; }
+  const o = p.origins.find((x) => x[0] === c.origin), i = inputs(p, o, d, { tons: c.tons, miles: c.miles, mode: c.mode, over: c.over }), r = landed(i);
+  const set = (k) => (v) => { if (isFinite(v)) c.over[k] = v; else delete c.over[k]; render(); };
+  const sec = el("section", "panel"), ph = el("div", "ph"); ph.append(el("h2", null, "Landed cost: " + p.name), el("small", null, "Every number can be changed; picking a new origin or destination resets them")); sec.appendChild(ph);
+  const f = el("div", "form");
+  f.append(field("From", c.origin, (v) => { c.origin = v; c.over = {}; render(); }, { options: p.origins.map((x) => [x[0], x[1]]) }), destField(),
+    field("Shipment, tonnes", c.tons, (v) => { c.tons = Math.max(1, v || 1); render(); }, { min: 1 }),
+    field(p.unit + ", $/t", Math.round(i.price), set("price"), { hint: typeof p.base === "number" ? "A rough export price; use a real quote" : "LME cash " + usd(basePrice(p)) + " on " + S.lmeDate }),
+    field("Freight to the US, $/t", i.freight, set("freight"), { hint: A.lanes[o[3]].name }), field("Days in transit", i.days, set("days")),
+    field("Normal duty, %", i.mfn, set("mfn"), { step: "0.1" }), field("Section 232 duty, %", i.s232, set("s232"), { step: "1" }), field("Other duties, %", i.other, set("other"), { step: "0.1", hint: "Anti-dumping or countervailing, if any" }),
+    field("Inland distance, miles", c.miles, (v) => { c.miles = Math.max(0, v || 0); render(); }, { min: 0 }), field("Inland by", c.mode, (v) => { c.mode = v; render(); }, { options: modeOpts }),
+    field("Interest rate, %", i.finance, set("finance"), { step: "0.5" }));
+  sec.appendChild(f); main.appendChild(sec);
+  if (o[10].length) { const fl = el("p", "sub"); fl.style.margin = "10px 0 0"; o[10].forEach((k) => { const t = el("span", "tag", A.flags[k][0]); t.title = A.flags[k][1]; fl.append(t, A.flags[k][1] + " "); }); sec.appendChild(fl); }
+
+  const dom = domestic(p, { miles: c.miles, mode: c.mode, dom: c.over.dom }), diff = r.total - dom, grid = el("div", "grid"), out = el("section", "panel"), side = el("section", "panel");
+  const k = el("div", "kpis"), kp = (label, big, small) => { const x = el("div"); x.append(el("div", "k mono", label), el("div", "big", big)); if (small) x.appendChild(el("div", "sub", small)); return x; };
+  k.append(kp("Landed, per tonne", usd(r.total), p.shortTon ? usd(r.total / ST) + " a short ton" : usd(r.total / LB, 2) + " a pound"), kp("Whole shipment", usd(r.total * c.tons), c.tons.toLocaleString("en-US") + " tonnes"), kp("Order to arrival", r.days + " days", "sailing or rail time only"));
+  out.append(el("h2", null, "The build-up"), k); k.style.marginTop = "10px";
+  const tw = el("div", "tablewrap"), tb = el("table"), tbody = el("tbody"); tb.appendChild(tbody);
+  r.lines.forEach(([label, v, part]) => { if (Math.abs(v) < .005 && /Other|Normal/.test(label)) return; const tr = el("tr"), td = el("td"), dot = el("i"); dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;background:" + PARTS.find((x) => x[0] === part)[2]; td.append(dot, label); tr.append(td, el("td", "r", usd(v, v < 100 ? 2 : 0)), el("td", "r", (v / r.total * 100).toFixed(1) + "%")); tbody.appendChild(tr); });
+  const tt = el("tr", "total"); tt.append(el("td", null, "Landed cost per tonne"), el("td", "r", usd(r.total)), el("td", "r", "100%")); tbody.appendChild(tt); tw.appendChild(tb);
+  const sb = stackBar(r.parts, r.total); sb.style.margin = "12px 0 0"; out.append(tw, sb, partsLegend());
+
+  side.append(el("h2", null, "Import or buy here?")); const df = el("div", "form"); df.style.margin = "10px 0";
+  df.append(field(p.domestic.label + ", $/t", Math.round(dom - c.miles * A.inland[c.mode][1]), set("dom"), { hint: p.shortTon ? usd((dom - c.miles * A.inland[c.mode][1]) / ST) + " a short ton" : "" })); side.appendChild(df);
+  side.appendChild(el("p", "sub", p.domestic.how));
+  const v = el("p", "verdict"), pct = Math.abs(diff) / dom * 100;
+  v.append(el("b", diff < 0 ? "good" : "warn", diff < 0 ? "Importing is about " + usd(-diff) + " a tonne cheaper (" + pct.toFixed(0) + "%). " : "Importing costs about " + usd(diff) + " a tonne more (" + pct.toFixed(0) + "%). "));
+  v.append(Math.abs(pct) < 4 ? "That is inside the margin of error of these estimates; lead time and reliability should decide it." : diff < 0 ? "Check that the gap survives a real freight quote, any anti-dumping duty, and the " + r.days + " days your money is tied up." : "At these numbers the local market is the better buy; importing only makes sense if the gap closes or supply is short.");
+  side.appendChild(v);
+  const duty = r.parts.duty, note = el("p", "sub"); note.style.marginTop = "12px"; note.textContent = "Duties and fees are " + usd(duty) + " a tonne, " + (duty / r.total * 100).toFixed(0) + "% of the landed cost. US duty is charged on the value at the foreign port, so freight is not taxed."; side.appendChild(note);
+  grid.append(out, side); main.appendChild(grid);
+}
+
+/* ---------- sourcing plan ---------- */
+function planView(main) {
+  const p = product(), d = dest(), c = S.plan, sec = el("section", "panel"), ph = el("div", "ph");
+  ph.append(el("h2", null, "Sourcing plan: " + p.name), el("small", null, "Ranks every origin on default assumptions, then suggests a split")); sec.appendChild(ph);
+  const f = el("div", "form"), scen = p.id === "cathode" ? [["now", "Today: no duty on cathode"], ["15", "If a 15% duty arrives (proposed for 2027)"], ["30", "If it rises to 30% (proposed for 2028)"]] : [["now", "Today's rates"], ["25", "If the duty were cut to 25%"], ["0", "If the duty were removed"]];
+  f.append(destField(), field("Tonnes needed a month", c.tons, (v) => { c.tons = Math.max(1, v || 1); render(); }, { min: 1 }), field("Inland distance, miles", c.miles, (v) => { c.miles = Math.max(0, v || 0); render(); }, { min: 0 }),
+    field("Inland by", c.mode, (v) => { c.mode = v; render(); }, { options: modeOpts }), field("What if", c.scenario, (v) => { c.scenario = v; render(); }, { options: scen }));
+  if (typeof p.base === "number") f.appendChild(field("World export price, $/t", c.base != null ? c.base : p.base, (v) => { c.base = isFinite(v) && v > 0 ? v : null; render(); }, { hint: "A placeholder. Replace with a current offshore quote" }));
+  const po = { tons: c.tons, miles: c.miles, mode: c.mode, scenario: c.scenario, base: c.base };
+  sec.appendChild(f); main.appendChild(sec);
+
+  const rows = p.origins.map((o) => { const i = inputs(p, o, d, po), r = landed(i); return { o, r, total: r.total, s232: i.s232 }; }).sort((a, b) => a.total - b.total);
+  const domBase = domestic(p, { miles: c.miles, mode: c.mode }), sc = c.scenario === "now" ? null : +c.scenario;
+  // a tariff change moves the US market price too; approximate that for the what-if
+  let dom = domBase; if (sc != null) { const bp = basePrice(p); if (p.id === "cathode") dom += bp * sc / 100; else if (p.id === "p1020") dom -= bp * (50 - sc) / 100; else dom -= 600 * (50 - sc) / 100 * .6; }
+  const max = Math.max(dom, ...rows.filter((x) => !x.o[10].includes("blocked")).map((x) => x.total));
+  const tbl = el("section", "panel"), tw = el("div", "tablewrap"), tb = el("table"), th = el("tr"), tbody = el("tbody");
+  [["Origin", ""], ["Landed $/t", "r"], ["Against US market", "r"], ["Section 232", "r"], ["Days", "r"], ["What the cost is made of", ""]].forEach(([t, cls]) => th.appendChild(el("th", cls, t))); const thead = el("thead"); thead.appendChild(th); tb.append(thead, tbody);
+  rows.forEach(({ o, r, total, s232 }) => {
+    const tr = el("tr"), td = el("td"), diff = total - dom, blocked = o[10].includes("blocked"); td.appendChild(el("b", null, o[1])); const fl = el("small"); o[10].forEach((k) => { const t = el("span", "tag", A.flags[k][0]); t.title = A.flags[k][1]; fl.appendChild(t); }); td.appendChild(fl);
+    const dc = el("td", "r " + (diff < 0 ? "good" : "warn"), (diff < 0 ? "−" : "+") + usd(Math.abs(diff)).slice(1) + (diff < 0 ? " cheaper" : " dearer")), bar = el("td"); if (!blocked) bar.appendChild(stackBar(r.parts, max)); else bar.appendChild(el("small", null, "Off the scale"));
+    tr.append(td, el("td", "r", usd(total)), dc, el("td", "r", s232 + "%"), el("td", "r", String(r.days)), bar); tbody.appendChild(tr);
+  });
+  const dr = el("tr", "dom"), dtd = el("td"); dtd.append(el("b", null, p.domestic.label), el("small", null, sc != null ? "Adjusted for the what-if, roughly" : "The benchmark every import is measured against")); const dbar = el("td"), ds = el("div", "stack"), di = el("i"); ds.style.width = dom / max * 100 + "%"; di.style.cssText = "flex:1;background:var(--muted)"; ds.appendChild(di); dbar.appendChild(ds);
+  dr.append(dtd, el("td", "r", usd(dom)), el("td", "r", "—"), el("td", "r", "—"), el("td", "r", "0–35"), dbar); tbody.appendChild(dr);
+  tw.appendChild(tb); const h = el("div", "ph"); h.append(el("h2", null, "Every origin, delivered to " + d[1]), el("small", null, c.tons.toLocaleString("en-US") + " tonnes a month")); tbl.append(h, tw, partsLegend()); main.appendChild(tbl);
+
+  // suggested split
+  const ok = rows.filter((x) => !x.o[10].includes("blocked") && !x.o[10].includes("small")), a = ok[0], b = ok.find((x) => x.o[3] !== a.o[3]) || ok[1], rec = el("section", "panel"), split = el("div", "split"), why = el("div", "prose");
+  const importWins = a.total < dom * .97, plan = importWins ? [[a.o[1], 50, a.total], [b.o[1], 30, b.total], [p.domestic.label, 20, dom]] : [[p.domestic.label, 70, dom], [a.o[1], 30, a.total]];
+  const blended = plan.reduce((s, x) => s + x[1] / 100 * x[2], 0), monthly = blended * c.tons, allDom = dom * c.tons;
+  plan.forEach(([n, pc, cost]) => { const x = el("div"); x.append(el("div", "pct", pc + "%"), el("b", null, n), el("div", "sub", Math.round(c.tons * pc / 100).toLocaleString("en-US") + " t a month at " + usd(cost))); x.lastChild.style.margin = "0"; split.appendChild(x); });
+  rec.append(el("h2", null, "A starting split"), split);
+  why.appendChild(el("p", null, importWins
+    ? a.o[1] + " is the cheapest route at " + usd(a.total) + " a tonne delivered, " + usd(dom - a.total) + " under the US market. " + b.o[1] + " is the cheapest option on a different shipping route, so one port closure, strike or blockade can't stop everything. A fifth stays with US suppliers because it arrives in days and keeps a relationship alive for when imports are late."
+    : "On these numbers the US market is cheaper than, or within a few percent of, the best import (" + a.o[1] + " at " + usd(a.total) + "). The plan buys mostly at home and keeps a smaller import stream from " + a.o[1] + " so a supplier and the paperwork are already in place if the gap opens."));
+  why.appendChild(el("p", null, "Blended cost: " + usd(blended) + " a tonne, or " + usd(monthly) + " a month. Buying everything in the US would cost " + usd(allDom) + ", so this plan " + (monthly < allDom ? "saves about " + usd(allDom - monthly) : "costs about " + usd(monthly - allDom) + " more") + " a month."));
+  const cav = el("ul", "plain"); ["This is a rule of thumb (cheapest, cheapest on another route, some domestic), not an optimiser. It ignores supplier quality, minimum order sizes, credit terms and your storage.",
+    "Imports tie up cash for the voyage and expose you to price moves while the metal is at sea. Hedge or match pricing periods.",
+    p.id === "hrc" ? "The offshore prices are placeholders built from one world export price. The real test is a current quote: when US prices are this far above the world price, offshore sellers raise their offers too. Anti-dumping duties are not included either. For flagged origins they can add anything from a few percent to more than the steel is worth." : p.id === "cathode" ? "A duty on refined copper is proposed for 2027. Use the what-if selector to see how the ranking changes." : "The Midwest premium default may be out of date; it decides whether importing beats buying duty-paid."].forEach((t) => cav.appendChild(el("li", null, t)));
+  why.appendChild(cav); rec.appendChild(why); main.appendChild(rec);
+}
+
+/* ---------- playbook ---------- */
+function playbookView(main) {
+  const pb = A.playbook.find((x) => x.metal === S.metal), cols = el("div", "cols"); cols.style.marginTop = "12px";
+  const now = el("section", "panel prose"), moves = el("section", "panel"), ul = el("ul", "moves");
+  now.append(el("h2", null, pb.title + ": how it gets here today")); pb.now.forEach((t) => now.appendChild(el("p", null, t))); now.children[1].style.marginTop = "10px";
+  now.appendChild(el("h2", null, "What would change the picture")); now.lastChild.style.margin = "14px 0 8px"; const wl = el("ul", "plain"); pb.watch.forEach((t) => wl.appendChild(el("li", null, t))); now.appendChild(wl);
+  moves.append(el("h2", null, "What importers are doing")); pb.moves.forEach(([h, t]) => { const li = el("li"); li.append(el("b", null, h), el("span", null, t)); ul.appendChild(li); }); moves.appendChild(ul);
+  cols.append(now, moves); main.appendChild(cols);
+  const kit = el("section", "panel"), ku = el("ul", "moves"); kit.append(el("h2", null, "The importer's toolkit")); A.toolkit.forEach(([h, t]) => { const li = el("li"); li.append(el("b", null, h), el("span", null, t)); ku.appendChild(li); }); kit.appendChild(ku); main.appendChild(kit);
+  const src = el("section", "panel"), su = el("ul", "plain"); src.append(el("h2", null, "Where the trade facts came from")); su.style.marginTop = "8px";
+  A.sources.forEach(([t, u]) => { const li = el("li"), a = el("a", null, t); a.href = u; a.target = "_blank"; a.rel = "noopener noreferrer"; li.appendChild(a); su.appendChild(li); }); src.appendChild(su); main.appendChild(src);
+}
+
+function render() {
+  const h = location.hash.slice(1); S.view = VIEWS.some((v) => v[0] === h) ? h : "map";
+  const tabs = $("tabs"), ms = $("metals"), main = $("main"); tabs.textContent = ""; ms.textContent = ""; main.textContent = ""; hideTip();
+  VIEWS.forEach(([id, label]) => { const b = el("button", "btn", label); b.type = "button"; b.setAttribute("aria-pressed", String(id === S.view)); b.addEventListener("click", () => { location.hash = id; }); tabs.appendChild(b); });
+  METALS.forEach(([id, label]) => { const b = el("button", "btn", label); b.type = "button"; b.setAttribute("aria-pressed", String(id === S.metal)); b.addEventListener("click", () => { S.metal = id; S.cost.over = {}; S.cost.origin = null; S.plan.scenario = "now"; S.plan.base = null; render(); }); ms.appendChild(b); });
+  ({ map: mapView, cost: costView, plan: planView, playbook: playbookView })[S.view](main);
+}
+addEventListener("hashchange", render);
+$("checked").textContent = A.checked;
+Promise.all([fetch("../../../data/world.json").then((r) => { if (!r.ok) throw new Error("map"); return r.json(); }), fetch("../../../data/metals.json").then((r) => r.ok ? r.json() : null).catch(() => null)]).then(([w, m]) => {
+  S.world = w;
+  if (m && m.lme) { ["copper", "aluminum"].forEach((k) => { const rows = m.lme[k]; if (rows && rows.length) { S.lme[k] = rows[rows.length - 1][1]; S.lmeDate = new Date(rows[rows.length - 1][0] + "T12:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }); } }); }
+  if (!S.lme.copper) S.lme.copper = 11000; if (!S.lme.aluminum) S.lme.aluminum = 2900;
+  $("stamp").textContent = S.lmeDate ? "LME prices from " + S.lmeDate : "Using placeholder metal prices";
+  render();
+}).catch((e) => { console.error(e); $("main").textContent = ""; $("main").appendChild(el("div", "state", "The map couldn't be loaded. Try refreshing in a moment.")); });
+</script>
+</body>
+</html>
