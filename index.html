@@ -197,7 +197,8 @@ footer { margin-top: 48px; padding: 20px 0 36px; border-top: 1px solid var(--lin
   <footer class="mono" id="foot"></footer>
 </div>
 
-<script src="apps.js"></script>
+<!-- The app list is loaded with a changing address so browsers never show an old copy of it. -->
+<script>document.write('<script src="apps.js?v=' + Date.now() + '"><\/script>');</script>
 <script src="shop/items.js"></script>
 <script>
 const HUB = window.HUB || { title: "App Hub", tagline: "", categories: [], apps: [] };
