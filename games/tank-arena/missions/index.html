@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tank Arena · Missions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* Missions mode for Tank Arena: you drive one tank through walled arenas against
+   computer tanks. Same neon-grid look as the rest of the game. One canvas does
+   all the drawing; the page around it is the status bar and the controls help. */
+:root {
+  --bg: #02060E; --panel: #06101D; --line: #13456E; --text: #DDF6FF; --muted: #74A3BF;
+  --leaf: #00E5FF; --sun: #FF9A1F; --down: #FF3D71;
+  --font-display: "Orbitron", "Trebuchet MS", sans-serif;
+  --font-body: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Share Tech Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 17px; line-height: 1.45; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px 40px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+.top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(22px, 4vw, 32px); letter-spacing: .04em; margin: 20px 0 12px; color: var(--leaf); text-shadow: 0 0 18px rgba(0, 229, 255, .45); }
+.hud { display: flex; flex-wrap: wrap; gap: 6px 26px; align-items: center; padding: 8px 0 10px; }
+.hud b { font-family: var(--font-display); font-weight: 500; color: var(--text); margin-left: 8px; font-size: 16px; }
+.hud span { color: var(--muted); }
+.hud .sp { margin-left: auto; display: flex; gap: 8px; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; color: var(--muted); font: inherit; font-family: var(--font-mono); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.btn:hover, .btn[aria-pressed="true"] { border-color: var(--leaf); color: var(--leaf); }
+.stage { position: relative; border: 1px solid var(--leaf); box-shadow: 0 0 24px rgba(0, 229, 255, .25), inset 0 0 24px rgba(0, 229, 255, .08); border-radius: 4px; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+.pad { display: none; gap: 10px; margin-top: 10px; justify-content: flex-end; }
+.pad .btn { padding: 14px 22px; border-color: var(--sun); color: var(--sun); }
+@media (pointer: coarse) { .pad { display: flex; } }
+.help { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 18px; }
+.help div { border: 1px solid var(--line); border-radius: 4px; background: var(--panel); padding: 12px 14px; }
+.help h2 { font-family: var(--font-mono); font-weight: 400; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--sun); margin: 0 0 6px; }
+.help p { margin: 0; color: var(--muted); }
+.help b { color: var(--text); font-weight: 600; }
+.roster { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px; color: var(--muted); font-size: 15px; }
+.roster i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; box-shadow: 0 0 8px currentColor; background: currentColor; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="mono" href="../">← Tank Arena</a>
+    <span class="mono" id="who" style="color:var(--muted)"></span>
+  </header>
+  <h1>Missions</h1>
+  <div class="hud mono">
+    <span>Mission<b id="hMission">1</b></span>
+    <span>Enemies<b id="hEnemies">0</b></span>
+    <span>Lives<b id="hLives">3</b></span>
+    <span>Best<b id="hBest">–</b></span>
+    <span class="sp"><button class="btn" id="pause" type="button">Pause</button><button class="btn" id="sound" type="button" aria-pressed="true">Sound</button></span>
+  </div>
+  <div class="stage" id="stage"><canvas id="c" width="880" height="560" aria-label="Game arena"></canvas></div>
+  <div class="pad"><button class="btn" id="mineBtn" type="button">Drop mine</button></div>
+
+  <div class="help">
+    <div><h2>Keyboard and mouse</h2><p><b>W A S D</b> or arrows to drive. <b>Mouse</b> aims, <b>click</b> fires. <b>Space</b> or right-click drops a mine. <b>P</b> pauses.</p></div>
+    <div><h2>Touch</h2><p>Drag in the <b>lower-left</b> of the arena to drive. <b>Tap anywhere else</b> to aim and fire there. Use the mine button underneath.</p></div>
+    <div><h2>Rules</h2><p>One hit destroys any tank, including yours. Shells <b>bounce once</b> off walls. Mines blow after a few seconds, or when a tank gets close, and they break orange blocks. Shells fly over pits; tanks can't cross them.</p></div>
+  </div>
+  <div class="roster" id="roster"></div>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const cv = $("c"), g = cv.getContext("2d");
+const C = 40, COLS = 22, ROWS = 14, W = COLS * C, H = ROWS * C, TR = 14;
+const TAU = Math.PI * 2, rnd = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const angDiff = (a, b) => { let d = (b - a) % TAU; if (d > Math.PI) d -= TAU; if (d < -Math.PI) d += TAU; return d; };
+
+/* Enemy kinds. speed px/s, cd = seconds between shots, bs = shell speed, bounce = ricochets,
+   maxB = shells in the air at once, mines = mines it may have down, turn = turret rad/s. */
+const KINDS = {
+  sentry:  { name: "Sentry",   col: "#9FB3C8", speed: 0,  cd: [1.8, 3.2], bs: 170, bounce: 1, maxB: 1, mines: 0, turn: 1.1, err: .10, keep: 9 },
+  rover:   { name: "Rover",    col: "#FF9A1F", speed: 45, cd: [1.5, 2.8], bs: 170, bounce: 1, maxB: 1, mines: 0, turn: 1.8, err: .07, keep: 6 },
+  lancer:  { name: "Lancer",   col: "#2EE6A6", speed: 32, cd: [1.9, 3.1], bs: 350, bounce: 0, maxB: 1, mines: 0, turn: 2.2, err: .03, keep: 8 },
+  miner:   { name: "Miner",    col: "#FFE14A", speed: 85, cd: [1.6, 2.8], bs: 170, bounce: 1, maxB: 1, mines: 2, turn: 2.0, err: .07, keep: 4 },
+  striker: { name: "Striker",  col: "#FF3B5C", speed: 70, cd: [0.5, 1.1], bs: 170, bounce: 1, maxB: 3, mines: 0, turn: 3.0, err: .05, keep: 5 },
+  rico:    { name: "Ricochet", col: "#7CFF4D", speed: 0,  cd: [1.2, 2.2], bs: 300, bounce: 2, maxB: 2, mines: 0, turn: 3.2, err: .02, keep: 9 },
+  phantom: { name: "Phantom",  col: "#FFFFFF", speed: 55, cd: [0.9, 1.8], bs: 170, bounce: 1, maxB: 3, mines: 0, turn: 3.0, err: .05, keep: 5, cloak: true },
+  apex:    { name: "Apex",     col: "#B36BFF", speed: 95, cd: [0.45, 0.9], bs: 190, bounce: 1, maxB: 4, mines: 2, turn: 4.0, err: .03, keep: 4 }
+};
+const PLAYER = { col: "#00E5FF", speed: 108, bs: 170, bounce: 1, maxB: 5, mines: 2 };
+
+/* Missions. walls: [kind, x, y, w, h] in cells; "#" solid, "+" breakable, "o" pit.
+   sym:true also adds each wall rotated half a turn. p = player cell, e = [kind, x, y]. */
+const MISSIONS = [
+  { walls: [["#", 10, 4, 2, 6]], p: [3, 7], e: [["sentry", 18, 6]] },
+  { sym: true, walls: [["#", 6, 3, 1, 4], ["+", 10, 6, 2, 2]], p: [2, 10], e: [["rover", 18, 3], ["sentry", 19, 10]] },
+  { sym: true, walls: [["#", 5, 5, 4, 1], ["o", 10, 2, 2, 3]], p: [2, 7], e: [["rover", 17, 2], ["rover", 17, 11], ["sentry", 19, 6]] },
+  { sym: true, walls: [["#", 8, 2, 1, 4], ["+", 8, 6, 1, 1]], p: [2, 6], e: [["lancer", 19, 6], ["rover", 16, 2], ["rover", 16, 11]] },
+  { sym: true, walls: [["#", 4, 4, 3, 1], ["#", 10, 4, 2, 1], ["+", 10, 6, 2, 1]], p: [2, 11], e: [["miner", 18, 2], ["miner", 15, 10], ["sentry", 20, 6]] },
+  { sym: true, walls: [["#", 7, 0, 1, 5], ["o", 3, 9, 3, 1]], p: [2, 3], e: [["striker", 18, 6], ["rover", 15, 2], ["lancer", 19, 11]] },
+  { sym: true, walls: [["#", 6, 3, 4, 1], ["#", 6, 4, 1, 3]], p: [2, 11], e: [["rico", 19, 2], ["rico", 19, 11], ["rover", 14, 7]] },
+  { sym: true, walls: [["+", 9, 1, 1, 5], ["#", 4, 6, 2, 2]], p: [1, 2], e: [["striker", 18, 2], ["striker", 18, 11], ["miner", 13, 7], ["sentry", 20, 6]] },
+  { sym: true, walls: [["#", 5, 2, 1, 3], ["#", 9, 6, 1, 2], ["o", 2, 10, 2, 2]], p: [2, 6], e: [["phantom", 18, 4], ["phantom", 18, 9], ["lancer", 20, 6]] },
+  { sym: true, walls: [["#", 3, 3, 5, 1], ["#", 10, 2, 2, 2], ["+", 10, 5, 2, 2]], p: [1, 11], e: [["rico", 20, 1], ["striker", 16, 6], ["miner", 18, 11], ["rover", 13, 1], ["rover", 14, 12]] },
+  { sym: true, walls: [["#", 7, 4, 1, 6], ["o", 10, 1, 2, 2]], p: [2, 7], e: [["apex", 19, 6], ["striker", 17, 2], ["striker", 17, 11]] },
+  { sym: true, walls: [["#", 5, 1, 1, 4], ["#", 5, 9, 1, 4], ["+", 9, 5, 4, 1]], p: [2, 6], e: [["apex", 19, 3], ["apex", 19, 10], ["phantom", 15, 7], ["rico", 20, 6], ["lancer", 12, 1]] }
+];
+/* After the written missions, arenas are generated and the roster keeps growing. */
+function generated(n) {
+  const walls = [], kinds = ["rover", "lancer", "miner", "striker", "rico", "phantom", "apex"], e = [];
+  for (let i = 0; i < 5; i++) { const horiz = Math.random() < .5, len = 2 + (Math.random() * 4 | 0); walls.push([Math.random() < .25 ? "+" : Math.random() < .15 ? "o" : "#", 3 + (Math.random() * 7 | 0), 1 + (Math.random() * 10 | 0), horiz ? len : 1, horiz ? 1 : Math.min(len, 4)]); }
+  const count = Math.min(8, 4 + ((n - MISSIONS.length) / 2 | 0));
+  for (let i = 0; i < count; i++) e.push([kinds[Math.min(kinds.length - 1, (Math.random() * (3 + (n - MISSIONS.length) * .6)) | 0)], 12 + (Math.random() * 9 | 0), 1 + (Math.random() * 12 | 0)]);
+  return { sym: true, walls, p: [1, 6 + (Math.random() * 2 | 0)], e };
+}
+
+/* ---------- state ---------- */
+const S = { mission: 1, lives: 3, phase: "title", timer: 0, grid: [], tanks: [], shells: [], mines: [], fx: [], marks: [], dead: new Set(), level: null, dist: null, distT: 0, paused: false, t: 0 };
+const input = { keys: new Set(), mx: W / 2, my: H / 2, fire: false, mine: false, stick: null };
+let playerName = ""; try { playerName = localStorage.getItem("tank-arena-player") || ""; } catch (e) {}
+$("who").textContent = playerName ? "Playing as " + playerName : "";
+function best(set) { try { const all = JSON.parse(localStorage.getItem("tank-arena-missions") || "{}"), k = playerName || "guest"; if (set && !(all[k] >= set)) { all[k] = set; localStorage.setItem("tank-arena-missions", JSON.stringify(all)); } return all[k] || 0; } catch (e) { return 0; } }
+
+/* ---------- sound ---------- */
+let ac = null, soundOn = true;
+function beep(freq, dur, type = "square", vol = .05, slide = 0) {
+  if (!soundOn) return; try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), v = ac.createGain(), t = ac.currentTime;
+    o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    v.gain.setValueAtTime(vol, t); v.gain.exponentialRampToValueAtTime(.0001, t + dur); o.connect(v).connect(ac.destination); o.start(t); o.stop(t + dur); } catch (e) {}
+}
+
+/* ---------- level ---------- */
+const cell = (x, y) => (x < 0 || y < 0 || x >= COLS || y >= ROWS) ? "#" : S.grid[y][x];
+const cellAt = (px, py) => cell(Math.floor(px / C), Math.floor(py / C));
+const blocksShell = (px, py) => { const c = cellAt(px, py); return c === "#" || c === "+"; };
+const blocksTank = (cx, cy) => cell(cx, cy) !== ".";
+function loadMission(keepDead) {
+  const L = S.level && keepDead ? S.level : (MISSIONS[S.mission - 1] || generated(S.mission)); S.level = L;
+  if (!keepDead) S.dead = new Set();
+  S.grid = Array.from({ length: ROWS }, () => Array(COLS).fill("."));
+  const put = (k, x, y, w, h) => { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (i >= 0 && j >= 0 && i < COLS && j < ROWS) S.grid[j][i] = k; };
+  L.walls.forEach(([k, x, y, w, h]) => { put(k, x, y, w, h); if (L.sym) put(k, COLS - x - w, ROWS - y - h, w, h); });
+  const clear = (x, y) => { for (let j = y - 1; j <= y + 1; j++) for (let i = x - 1; i <= x + 1; i++) if (i >= 0 && j >= 0 && i < COLS && j < ROWS && (i === x || j === y)) S.grid[j][i] = "."; };
+  clear(L.p[0], L.p[1]); L.e.forEach((e) => clear(e[1], e[2]));
+  S.tanks = [mkTank(null, L.p[0], L.p[1], -1)];
+  L.e.forEach((e, i) => { if (!S.dead.has(i)) S.tanks.push(mkTank(e[0], e[1], e[2], i)); });
+  S.shells = []; S.mines = []; S.fx = []; if (!keepDead) S.marks = []; S.distT = 0; hud();
+}
+function mkTank(kind, cx, cy, idx) {
+  const k = kind ? KINDS[kind] : PLAYER, x = cx * C + C / 2, y = cy * C + C / 2;
+  return { kind, k, idx, x, y, vx: 0, vy: 0, body: kind ? Math.PI : 0, aim: kind ? Math.PI : 0, want: Math.PI, canFire: false, cd: rnd(1, 2.2), think: rnd(0, .2), goal: null, goalT: 0, mineT: rnd(3, 7), flash: 0, alive: true, err: 0 };
+}
+function hud() { $("hMission").textContent = S.mission; $("hEnemies").textContent = S.tanks.filter((t) => t.kind && t.alive).length; $("hLives").textContent = S.lives; const b = best(); $("hBest").textContent = b ? "Mission " + b : "–"; }
+
+/* ---------- physics helpers ---------- */
+function moveTank(t, dt) {
+  // slide along walls: move each axis on its own, then push out of any overlapped cell
+  for (const ax of ["x", "y"]) {
+    t[ax] += (ax === "x" ? t.vx : t.vy) * dt;
+    const cx0 = Math.floor((t.x - TR) / C), cx1 = Math.floor((t.x + TR) / C), cy0 = Math.floor((t.y - TR) / C), cy1 = Math.floor((t.y + TR) / C);
+    for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
+      if (!blocksTank(cx, cy)) continue;
+      const nx = clamp(t.x, cx * C, cx * C + C), ny = clamp(t.y, cy * C, cy * C + C), dx = t.x - nx, dy = t.y - ny, d = Math.hypot(dx, dy);
+      if (d < TR) { if (d > .001) { t.x += dx / d * (TR - d); t.y += dy / d * (TR - d); } else t[ax] -= (ax === "x" ? t.vx : t.vy) * dt; }
+    }
+  }
+}
+function fire(t) {
+  const live = S.shells.filter((s) => s.owner === t).length; if (live >= t.k.maxB) return false;
+  const a = t.aim, x = t.x + Math.cos(a) * (TR + 8), y = t.y + Math.sin(a) * (TR + 8);
+  if (blocksShell(x, y)) return false;
+  S.shells.push({ x, y, vx: Math.cos(a) * t.k.bs, vy: Math.sin(a) * t.k.bs, b: t.k.bounce, owner: t, age: 0, trail: [], fast: t.k.bs > 250 });
+  t.flash = .45; S.fx.push({ kind: "ring", x, y, r: 3, max: 14, life: .15, t: 0, col: t.k.col }); beep(t.kind ? 320 : 520, .08, "square", .04, -180); return true;
+}
+function layMine(t) {
+  if (S.mines.filter((m) => m.owner === t).length >= t.k.mines) return false;
+  S.mines.push({ x: t.x, y: t.y, age: 0, owner: t }); beep(180, .12, "triangle", .05); return true;
+}
+function explode(x, y, R = 84) {
+  S.fx.push({ kind: "boom", x, y, r: 8, max: R, life: .45, t: 0, col: "#FF9A1F" }); beep(90, .5, "sawtooth", .09, -50);
+  for (let j = Math.floor((y - R) / C); j <= Math.floor((y + R) / C); j++) for (let i = Math.floor((x - R) / C); i <= Math.floor((x + R) / C); i++)
+    if (cell(i, j) === "+" && Math.hypot(i * C + C / 2 - x, j * C + C / 2 - y) < R) { S.grid[j][i] = "."; S.fx.push({ kind: "ring", x: i * C + C / 2, y: j * C + C / 2, r: 6, max: 30, life: .3, t: 0, col: "#FF9A1F" }); }
+  S.tanks.forEach((t) => { if (t.alive && Math.hypot(t.x - x, t.y - y) < R) kill(t); });
+  S.shells = S.shells.filter((s) => Math.hypot(s.x - x, s.y - y) > R * .8);
+  S.mines.forEach((m) => { if (!m.gone && Math.hypot(m.x - x, m.y - y) < R && (m.x !== x || m.y !== y)) { m.gone = true; setTimeout(() => explode(m.x, m.y), 90); } });
+  S.mines = S.mines.filter((m) => !m.gone);
+}
+function kill(t) {
+  if (!t.alive) return; t.alive = false; S.marks.push({ x: t.x, y: t.y, col: t.k.col });
+  S.fx.push({ kind: "boom", x: t.x, y: t.y, r: 6, max: 46, life: .5, t: 0, col: t.k.col }); beep(140, .35, "sawtooth", .08, -90);
+  if (t.kind) { S.dead.add(t.idx); hud(); if (!S.tanks.some((x) => x.kind && x.alive) && S.phase === "play") { S.phase = "clear"; S.timer = 1.8; best(S.mission); beep(660, .15, "square", .05); setTimeout(() => beep(880, .25, "square", .05), 160); } }
+  else if (S.phase === "play" || S.phase === "clear") { S.lives--; S.phase = S.lives > 0 ? "died" : "over"; S.timer = S.lives > 0 ? 1.8 : 0; hud(); }
+}
+
+/* Trace a shot the way a shell would fly. Returns "player", "ally" or null. */
+function trace(from, ang, bounces, speedRatio) {
+  let x = from.x + Math.cos(ang) * (TR + 8), y = from.y + Math.sin(ang) * (TR + 8), dx = Math.cos(ang) * 6, dy = Math.sin(ang) * 6, b = bounces;
+  if (blocksShell(x, y)) return null;
+  const p = S.tanks[0];
+  for (let i = 0; i < 170; i++) {
+    const nx = x + dx, ny = y + dy, hx = blocksShell(nx, y), hy = blocksShell(x, ny);
+    if (hx || hy || blocksShell(nx, ny)) { if (b-- <= 0) return null; if (hx) dx = -dx; if (hy) dy = -dy; if (!hx && !hy) { dx = -dx; dy = -dy; } continue; }
+    x = nx; y = ny;
+    const lead = i * 6 / 170 * speedRatio; // where the player will roughly be when the shell gets this far
+    if (p.alive && Math.hypot(p.x + p.vx * lead - x, p.y + p.vy * lead - y) < TR) return "player";
+    for (const t of S.tanks) if (t !== p && t.alive && (t !== from || i > 12) && Math.hypot(t.x - x, t.y - y) < TR + 3) return "ally";
+  }
+  return null;
+}
+function distField() { // steps from every open cell to the player, for enemy path-finding
+  const p = S.tanks[0], d = Array.from({ length: ROWS }, () => Array(COLS).fill(999)), q = [[Math.floor(p.x / C), Math.floor(p.y / C)]];
+  if (cell(q[0][0], q[0][1]) !== ".") return d; d[q[0][1]][q[0][0]] = 0;
+  for (let h = 0; h < q.length; h++) { const [x, y] = q[h]; for (const [i, j] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) if (!blocksTank(i, j) && d[j][i] > d[y][x] + 1) { d[j][i] = d[y][x] + 1; q.push([i, j]); } }
+  return d;
+}
+
+/* ---------- update ---------- */
+function think(t, dt) {
+  const p = S.tanks[0], k = t.k;
+  // aiming: check the straight shot a few times a second; bouncing kinds also probe random angles
+  t.think -= dt;
+  if (t.think <= 0 && p.alive) {
+    t.think = .12 + Math.random() * .08; const direct = Math.atan2(p.y - t.y, p.x - t.x); t.canFire = false;
+    if (trace(t, direct, 0, 170 / k.bs) === "player") { t.want = direct + t.err; t.canFire = true; }
+    else if (k.bounce > 0) { for (let i = 0; i < (k.bounce > 1 ? 16 : 7); i++) { const a = Math.random() * TAU; if (trace(t, a, k.bounce, 170 / k.bs) === "player") { t.want = a; t.canFire = true; break; } } if (!t.canFire) t.want = direct; }
+    else t.want = direct;
+  }
+  const d = angDiff(t.aim, t.want); t.aim += clamp(d, -k.turn * dt, k.turn * dt);
+  t.cd -= dt;
+  if (t.canFire && t.cd <= 0 && Math.abs(d) < .05 && p.alive && S.phase === "play") { if (fire(t)) { t.cd = rnd(k.cd[0], k.cd[1]); t.err = rnd(-k.err, k.err); } }
+
+  // driving
+  if (!k.speed) { t.vx = t.vy = 0; return; }
+  const cx = Math.floor(t.x / C), cy = Math.floor(t.y / C); t.goalT -= dt;
+  if (!t.goal || t.goalT <= 0 || Math.hypot(t.goal[0] - t.x, t.goal[1] - t.y) < 8) {
+    const here = S.dist[cy] ? S.dist[cy][cx] : 999, opts = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]].filter(([i, j]) => !blocksTank(i, j) && !S.mines.some((m) => Math.hypot(m.x - (i * C + 20), m.y - (j * C + 20)) < 70));
+    let pick = null;
+    if (opts.length) {
+      if (here > k.keep + 1) pick = opts.slice().sort((a, b) => S.dist[a[1]][a[0]] - S.dist[b[1]][b[0]])[0];
+      else if (here < k.keep - 2) pick = opts.slice().sort((a, b) => S.dist[b[1]][b[0]] - S.dist[a[1]][a[0]])[0];
+      else pick = opts[Math.random() * opts.length | 0];
+    }
+    t.goal = pick ? [pick[0] * C + C / 2, pick[1] * C + C / 2] : null; t.goalT = rnd(.6, 1.4);
+  }
+  let ax = 0, ay = 0; if (t.goal) { const gd = Math.hypot(t.goal[0] - t.x, t.goal[1] - t.y) || 1; ax = (t.goal[0] - t.x) / gd; ay = (t.goal[1] - t.y) / gd; }
+  for (const s of S.shells) { // sidestep shells that are about to arrive
+    const rx = t.x - s.x, ry = t.y - s.y, sp = Math.hypot(s.vx, s.vy), along = (rx * s.vx + ry * s.vy) / sp; if (along < 0 || along > 150 || (s.owner === t && s.age < .4)) continue;
+    const side = (rx * s.vy - ry * s.vx) / sp; if (Math.abs(side) < 26) { const sg = side >= 0 ? 1 : -1; ax += s.vy / sp * sg * 2.2; ay += -s.vx / sp * sg * 2.2; }
+  }
+  for (const m of S.mines) { const md = Math.hypot(t.x - m.x, t.y - m.y); if (md < 100 && md > 1) { ax += (t.x - m.x) / md * 2; ay += (t.y - m.y) / md * 2; } }
+  const al = Math.hypot(ax, ay); if (al > .01) { t.vx = ax / al * k.speed; t.vy = ay / al * k.speed; } else t.vx = t.vy = 0;
+  if (k.mines) { t.mineT -= dt; if (t.mineT <= 0) { t.mineT = rnd(4, 9); if (!S.tanks.some((o) => o !== t && o.kind && o.alive && Math.hypot(o.x - t.x, o.y - t.y) < 110)) layMine(t); } }
+}
+function update(dt) {
+  S.t += dt;
+  S.fx.forEach((f) => { f.t += dt; }); S.fx = S.fx.filter((f) => f.t < f.life);
+  if (S.phase === "title" || S.phase === "over") { if (input.fire) { input.fire = false; if (S.phase === "over") { S.mission = 1; S.lives = 3; } loadMission(false); S.phase = "intro"; S.timer = 1.6; } return; }
+  if (S.phase === "intro") { S.timer -= dt; aimPlayer(dt); input.fire = input.mine = false; if (S.timer <= 0) S.phase = "play"; return; }
+  if (S.phase === "clear" || S.phase === "died") {
+    S.timer -= dt;
+    if (S.timer <= 0) { if (S.phase === "clear") { S.mission++; if ((S.mission - 1) % 5 === 0) S.lives++; loadMission(false); } else loadMission(true); S.phase = "intro"; S.timer = 1.6; return; }
+  }
+  const p = S.tanks[0];
+  if (p.alive) {
+    let mx = 0, my = 0; const K = input.keys;
+    if (K.has("a") || K.has("arrowleft")) mx--; if (K.has("d") || K.has("arrowright")) mx++; if (K.has("w") || K.has("arrowup")) my--; if (K.has("s") || K.has("arrowdown")) my++;
+    if (input.stick) { mx = input.stick.dx; my = input.stick.dy; }
+    const ml = Math.hypot(mx, my); if (ml > .15) { const sc = Math.min(1, ml) / ml; p.vx = mx * sc * PLAYER.speed; p.vy = my * sc * PLAYER.speed; } else p.vx = p.vy = 0;
+    aimPlayer(dt);
+    if (input.fire) { input.fire = false; fire(p); }
+    if (input.mine) { input.mine = false; layMine(p); }
+  } else { p.vx = p.vy = 0; }
+  S.distT -= dt; if (S.distT <= 0 || !S.dist) { S.dist = distField(); S.distT = .4; }
+  for (const t of S.tanks) {
+    if (!t.alive) continue; if (t.kind) think(t, dt); t.flash = Math.max(0, t.flash - dt);
+    if (t.vx || t.vy) { const want = Math.atan2(t.vy, t.vx); t.body += clamp(angDiff(t.body, want), -7 * dt, 7 * dt); moveTank(t, dt); }
+  }
+  for (let i = 0; i < S.tanks.length; i++) for (let j = i + 1; j < S.tanks.length; j++) { // keep tanks from overlapping
+    const a = S.tanks[i], b = S.tanks[j]; if (!a.alive || !b.alive) continue; const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+    if (d < TR * 2 && d > .01) { const push = (TR * 2 - d) / 2; a.x -= dx / d * push; a.y -= dy / d * push; b.x += dx / d * push; b.y += dy / d * push; }
+  }
+  // shells
+  for (const s of S.shells) {
+    s.age += dt; s.trail.push(s.x, s.y); if (s.trail.length > (s.fast ? 28 : 14)) s.trail.splice(0, 2);
+    const nx = s.x + s.vx * dt, ny = s.y + s.vy * dt, hx = blocksShell(nx, s.y), hy = blocksShell(s.x, ny);
+    if (hx || hy || blocksShell(nx, ny)) {
+      if (s.b-- <= 0) { s.gone = true; S.fx.push({ kind: "ring", x: s.x, y: s.y, r: 2, max: 12, life: .18, t: 0, col: "#fff" }); continue; }
+      if (hx) s.vx = -s.vx; if (hy) s.vy = -s.vy; if (!hx && !hy) { s.vx = -s.vx; s.vy = -s.vy; } beep(900, .04, "sine", .03);
+    } else { s.x = nx; s.y = ny; }
+    for (const t of S.tanks) if (t.alive && (t !== s.owner || s.age > .15) && Math.hypot(t.x - s.x, t.y - s.y) < TR) { s.gone = true; kill(t); break; }
+    for (const m of S.mines) if (!s.gone && Math.hypot(m.x - s.x, m.y - s.y) < 11) { s.gone = true; m.boom = true; }
+  }
+  for (let i = 0; i < S.shells.length; i++) for (let j = i + 1; j < S.shells.length; j++) { const a = S.shells[i], b = S.shells[j]; if (!a.gone && !b.gone && Math.hypot(a.x - b.x, a.y - b.y) < 8) { a.gone = b.gone = true; S.fx.push({ kind: "ring", x: a.x, y: a.y, r: 2, max: 16, life: .2, t: 0, col: "#fff" }); } }
+  S.shells = S.shells.filter((s) => !s.gone);
+  // mines
+  for (const m of S.mines) { m.age += dt; if (m.age > 8.5) m.boom = true; if (m.age > 1.3 && S.tanks.some((t) => t.alive && t !== m.owner && Math.hypot(t.x - m.x, t.y - m.y) < 46)) m.fuse = (m.fuse || 0) + dt; if (m.fuse > .35) m.boom = true; }
+  const blown = S.mines.filter((m) => m.boom); S.mines = S.mines.filter((m) => !m.boom); blown.forEach((m) => explode(m.x, m.y));
+}
+function aimPlayer() { const p = S.tanks[0]; if (p && p.alive) p.aim = Math.atan2(input.my - p.y, input.mx - p.x); }
+
+/* ---------- drawing ---------- */
+function glow(col, blur) { g.shadowColor = col; g.shadowBlur = blur; }
+function drawTank(t) {
+  let alpha = 1; if (t.k.cloak) alpha = Math.max(.05, Math.min(1, t.flash / .45)) ; if (alpha < .02) return;
+  g.save(); g.globalAlpha = alpha; g.translate(t.x, t.y); g.strokeStyle = t.k.col; g.lineWidth = 2; glow(t.k.col, 12);
+  g.save(); g.rotate(t.body); g.fillStyle = "rgba(2,8,16,.9)"; g.beginPath(); g.roundRect(-14, -11, 28, 22, 4); g.fill(); g.stroke();
+  g.lineWidth = 1; g.globalAlpha = alpha * .7; g.beginPath(); for (const y of [-11, 11]) for (let x = -10; x <= 10; x += 5) { g.moveTo(x, y); g.lineTo(x, y + (y < 0 ? 4 : -4)); } g.stroke(); g.restore();
+  g.rotate(t.aim); g.lineWidth = 3; g.beginPath(); g.moveTo(4, 0); g.lineTo(TR + 8, 0); g.stroke();
+  g.lineWidth = 2; g.fillStyle = t.kind ? "rgba(2,8,16,.9)" : t.k.col; g.beginPath(); g.arc(0, 0, 6.5, 0, TAU); g.fill(); g.stroke(); g.restore();
+}
+function draw() {
+  g.setTransform(1, 0, 0, 1, 0, 0); g.shadowBlur = 0; g.fillStyle = "#020810"; g.fillRect(0, 0, W, H);
+  g.strokeStyle = "rgba(0,229,255,.07)"; g.lineWidth = 1; g.beginPath(); for (let x = C; x < W; x += C) { g.moveTo(x + .5, 0); g.lineTo(x + .5, H); } for (let y = C; y < H; y += C) { g.moveTo(0, y + .5); g.lineTo(W, y + .5); } g.stroke();
+  if (S.grid.length) {
+    for (const m of S.marks) { g.strokeStyle = m.col; g.globalAlpha = .35; g.lineWidth = 2; g.beginPath(); g.moveTo(m.x - 9, m.y - 9); g.lineTo(m.x + 9, m.y + 9); g.moveTo(m.x + 9, m.y - 9); g.lineTo(m.x - 9, m.y + 9); g.stroke(); g.globalAlpha = 1; }
+    for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) { const k = S.grid[j][i], x = i * C, y = j * C; if (k === ".") continue;
+      if (k === "#") { glow("#00E5FF", 10); g.fillStyle = "rgba(0,229,255,.12)"; g.strokeStyle = "#00E5FF"; g.lineWidth = 1.5; g.fillRect(x + 2, y + 2, C - 4, C - 4); g.strokeRect(x + 2.5, y + 2.5, C - 5, C - 5); }
+      else if (k === "+") { glow("#FF9A1F", 8); g.fillStyle = "rgba(255,154,31,.10)"; g.strokeStyle = "#FF9A1F"; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.fillRect(x + 3, y + 3, C - 6, C - 6); g.strokeRect(x + 3.5, y + 3.5, C - 7, C - 7); g.setLineDash([]); g.beginPath(); g.moveTo(x + 10, y + 10); g.lineTo(x + C - 10, y + C - 10); g.moveTo(x + C - 10, y + 10); g.lineTo(x + 10, y + C - 10); g.globalAlpha = .5; g.stroke(); g.globalAlpha = 1; }
+      else { g.shadowBlur = 0; g.fillStyle = "#000"; g.fillRect(x, y, C, C); g.strokeStyle = "rgba(0,229,255,.3)"; g.lineWidth = 1; g.strokeRect(x + 6.5, y + 6.5, C - 13, C - 13); g.strokeStyle = "rgba(0,229,255,.15)"; g.strokeRect(x + 12.5, y + 12.5, C - 25, C - 25); }
+    }
+    g.shadowBlur = 0;
+    for (const m of S.mines) { const hot = m.age > 6.5 || m.fuse; const on = !hot || Math.floor(S.t * 10) % 2; g.strokeStyle = hot ? "#FF3D71" : "#FFE14A"; glow(g.strokeStyle, on ? 12 : 0); g.lineWidth = 2; g.beginPath(); g.arc(m.x, m.y, 8, 0, TAU); g.stroke(); if (on) { g.fillStyle = g.strokeStyle; g.beginPath(); g.arc(m.x, m.y, 3, 0, TAU); g.fill(); } }
+    for (const t of S.tanks) if (t.alive) drawTank(t);
+    for (const s of S.shells) { const col = s.fast ? "#FF9A1F" : s.owner.k.col; glow(col, 10); g.strokeStyle = col; g.lineWidth = 2; g.globalAlpha = .5; g.beginPath(); for (let i = 0; i < s.trail.length; i += 2) g[i ? "lineTo" : "moveTo"](s.trail[i], s.trail[i + 1]); g.lineTo(s.x, s.y); g.stroke(); g.globalAlpha = 1; g.fillStyle = "#fff"; g.beginPath(); g.arc(s.x, s.y, 3.5, 0, TAU); g.fill(); }
+    for (const f of S.fx) { const q = f.t / f.life, r = f.r + (f.max - f.r) * q; g.globalAlpha = 1 - q; g.strokeStyle = f.col; glow(f.col, 16); g.lineWidth = f.kind === "boom" ? 4 : 2; g.beginPath(); g.arc(f.x, f.y, r, 0, TAU); g.stroke(); if (f.kind === "boom") { g.globalAlpha = (1 - q) * .25; g.fillStyle = f.col; g.fill(); } g.globalAlpha = 1; }
+  }
+  g.shadowBlur = 0;
+  // aim guide for the player
+  const p = S.tanks[0]; if (p && p.alive && S.phase !== "title") { g.strokeStyle = "rgba(0,229,255,.25)"; g.setLineDash([3, 7]); g.lineWidth = 1; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(input.mx, input.my); g.stroke(); g.setLineDash([]); g.strokeStyle = "#00E5FF"; g.beginPath(); g.arc(input.mx, input.my, 7, 0, TAU); g.moveTo(input.mx - 11, input.my); g.lineTo(input.mx + 11, input.my); g.moveTo(input.mx, input.my - 11); g.lineTo(input.mx, input.my + 11); g.stroke(); }
+  if (input.stick) { g.strokeStyle = "rgba(255,154,31,.6)"; g.lineWidth = 2; g.beginPath(); g.arc(input.stick.ox, input.stick.oy, 44, 0, TAU); g.stroke(); g.fillStyle = "rgba(255,154,31,.5)"; g.beginPath(); g.arc(input.stick.ox + input.stick.dx * 44, input.stick.oy + input.stick.dy * 44, 16, 0, TAU); g.fill(); }
+  // overlays
+  const banner = (big, small, col) => { g.fillStyle = "rgba(2,6,14,.72)"; g.fillRect(0, H / 2 - 74, W, 148); g.textAlign = "center"; glow(col, 18); g.fillStyle = col; g.font = '700 44px "Orbitron", sans-serif'; g.fillText(big, W / 2, H / 2 + 4); g.shadowBlur = 0; g.fillStyle = "#DDF6FF"; g.font = '500 20px "Rajdhani", sans-serif'; g.fillText(small, W / 2, H / 2 + 42); };
+  if (S.phase === "title") banner("MISSIONS", "Click or tap the arena to start", "#00E5FF");
+  else if (S.phase === "intro") banner("MISSION " + S.mission, "Enemy tanks: " + S.tanks.filter((t) => t.kind).length + "   ·   Lives: " + S.lives, "#00E5FF");
+  else if (S.phase === "clear") banner("CLEARED", (S.mission % 5 === 0 ? "Bonus life!  " : "") + "Next mission coming up", "#7CFF4D");
+  else if (S.phase === "died") banner("DESTROYED", "Lives left: " + S.lives, "#FF3D71");
+  else if (S.phase === "over") banner("GAME OVER", "You reached mission " + S.mission + ". Click or tap to play again", "#FF3D71");
+  else if (S.paused) banner("PAUSED", "Press P or the Pause button to carry on", "#FF9A1F");
+}
+
+/* ---------- loop and input ---------- */
+let last = 0;
+function frame(now) { const dt = Math.min(.033, (now - last) / 1000 || 0); last = now; if (!S.paused) update(dt); draw(); requestAnimationFrame(frame); }
+const toCanvas = (ev) => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height]; };
+addEventListener("keydown", (ev) => { const k = ev.key.toLowerCase(); if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k) && ev.target === document.body) ev.preventDefault(); if (k === " ") input.mine = true; else if (k === "p") setPause(!S.paused); else input.keys.add(k); });
+addEventListener("keyup", (ev) => input.keys.delete(ev.key.toLowerCase()));
+addEventListener("blur", () => { input.keys.clear(); if (S.phase === "play") setPause(true); });
+cv.addEventListener("contextmenu", (ev) => ev.preventDefault());
+cv.addEventListener("pointermove", (ev) => { const [x, y] = toCanvas(ev); if (input.stick && ev.pointerId === input.stick.id) { const dx = (x - input.stick.ox) / 44, dy = (y - input.stick.oy) / 44, l = Math.hypot(dx, dy); input.stick.dx = l > 1 ? dx / l : dx; input.stick.dy = l > 1 ? dy / l : dy; } else if (ev.pointerType !== "touch") { input.mx = x; input.my = y; } });
+cv.addEventListener("pointerdown", (ev) => {
+  const [x, y] = toCanvas(ev); if (S.paused) { setPause(false); return; }
+  if (ev.pointerType === "touch" && S.phase === "play" && x < W * .34 && y > H * .42 && !input.stick) { input.stick = { id: ev.pointerId, ox: x, oy: y, dx: 0, dy: 0 }; cv.setPointerCapture(ev.pointerId); return; }
+  if (ev.button === 2) { input.mine = true; return; }
+  input.mx = x; input.my = y; aimPlayer(); input.fire = true;
+});
+["pointerup", "pointercancel"].forEach((n) => cv.addEventListener(n, (ev) => { if (input.stick && ev.pointerId === input.stick.id) input.stick = null; }));
+function setPause(v) { S.paused = v && S.phase === "play"; $("pause").textContent = S.paused ? "Resume" : "Pause"; }
+$("pause").addEventListener("click", () => setPause(!S.paused));
+$("sound").addEventListener("click", () => { soundOn = !soundOn; $("sound").setAttribute("aria-pressed", String(soundOn)); });
+$("mineBtn").addEventListener("click", () => { input.mine = true; });
+Object.values(KINDS).forEach((k) => { const s = document.createElement("span"), i = document.createElement("i"); i.style.color = k.col; s.append(i, k.name); $("roster").appendChild(s); });
+hud(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
