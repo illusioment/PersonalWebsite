@@ -66,7 +66,8 @@ canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
   <div class="pad"><button class="btn" id="mineBtn" type="button">Drop mine</button></div>
 
   <div class="help">
-    <div><h2>Keyboard and mouse</h2><p><b>W A S D</b> or arrows to drive. <b>Mouse</b> aims, <b>click</b> fires. <b>Space</b> or right-click drops a mine. <b>P</b> pauses.</p></div>
+    <div><h2>Keyboard and mouse</h2><p><b>W A S D</b> to drive. <b>Mouse</b> aims, <b>click</b> fires. <b>Space</b> or right-click drops a mine. <b>P</b> pauses.</p></div>
+    <div><h2>Keyboard only</h2><p><b>W A S D</b> to drive. <b>Arrow keys</b> aim that way and fire (hold two for diagonals). <b>F</b> fires where the turret points. <b>Space</b> drops a mine.</p></div>
     <div><h2>Touch</h2><p>Drag in the <b>lower-left</b> of the arena to drive. <b>Tap anywhere else</b> to aim and fire there. Use the mine button underneath.</p></div>
     <div><h2>Rules</h2><p>One hit destroys any tank, including yours. Shells <b>bounce once</b> off walls. Mines blow after a few seconds, or when a tank gets close, and they break orange blocks. Shells fly over pits; tanks can't cross them.</p></div>
   </div>
@@ -269,7 +270,11 @@ function update(dt) {
   const p = S.tanks[0];
   if (p.alive) {
     let mx = 0, my = 0; const K = input.keys;
-    if (K.has("a") || K.has("arrowleft")) mx--; if (K.has("d") || K.has("arrowright")) mx++; if (K.has("w") || K.has("arrowup")) my--; if (K.has("s") || K.has("arrowdown")) my++;
+    if (K.has("a")) mx--; if (K.has("d")) mx++; if (K.has("w")) my--; if (K.has("s")) my++;
+    // arrow keys aim and fire, so the game is playable without a mouse (laptop trackpads often switch off while keys are held)
+    let ax = 0, ay = 0; if (K.has("arrowleft")) ax--; if (K.has("arrowright")) ax++; if (K.has("arrowup")) ay--; if (K.has("arrowdown")) ay++;
+    input.fireT = Math.max(0, (input.fireT || 0) - dt);
+    if (ax || ay) { const l = Math.hypot(ax, ay); input.mx = clamp(p.x + ax / l * 150, 8, W - 8); input.my = clamp(p.y + ay / l * 150, 8, H - 8); if (input.fireT <= 0) { input.fire = true; input.fireT = .3; } }
     if (input.stick) { mx = input.stick.dx; my = input.stick.dy; }
     const ml = Math.hypot(mx, my); if (ml > .15) { const sc = Math.min(1, ml) / ml; p.vx = mx * sc * PLAYER.speed; p.vy = my * sc * PLAYER.speed; } else p.vx = p.vy = 0;
     aimPlayer(dt);
@@ -348,7 +353,7 @@ function draw() {
 let last = 0;
 function frame(now) { const dt = Math.min(.033, (now - last) / 1000 || 0); last = now; if (!S.paused) update(dt); draw(); requestAnimationFrame(frame); }
 const toCanvas = (ev) => { const r = cv.getBoundingClientRect(); return [(ev.clientX - r.left) * W / r.width, (ev.clientY - r.top) * H / r.height]; };
-addEventListener("keydown", (ev) => { const k = ev.key.toLowerCase(); if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k) && ev.target === document.body) ev.preventDefault(); if (k === " ") input.mine = true; else if (k === "p") setPause(!S.paused); else input.keys.add(k); });
+addEventListener("keydown", (ev) => { const k = ev.key.toLowerCase(); if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(k) && ev.target === document.body) ev.preventDefault(); if (k === " " || k === "e") input.mine = true; else if (k === "f" && !ev.repeat) input.fire = true; else if (k === "p") setPause(!S.paused); else input.keys.add(k); });
 addEventListener("keyup", (ev) => input.keys.delete(ev.key.toLowerCase()));
 addEventListener("blur", () => { input.keys.clear(); if (S.phase === "play") setPause(true); });
 cv.addEventListener("contextmenu", (ev) => ev.preventDefault());
