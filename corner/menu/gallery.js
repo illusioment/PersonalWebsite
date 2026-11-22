@@ -23,10 +23,10 @@ window.GALLERY = {
     // Karly's picks
     "k-salmon-rice": "teriyaki salmon rice bowl", "k-chicken-stirfry": "chicken broccoli stir fry", "k-beef-bowl": "bulgogi rice bowl", "k-turkey-lettuce": "lettuce wraps",
     "k-sesame-noodles": "sesame noodle salad", "k-turkey-meatballs": "spaghetti and meatballs", "k-chicken-parm": "chicken parmesan", "k-lemon-chicken-pasta": "penne with chicken",
-    "k-bolognese": "rigatoni bolognese", "k-chicken-tacos": "chicken tacos", "k-turkey-taco-bowls": "burrito bowl", "k-carne-asada-bowls": "carne asada",
-    "k-chicken-enchiladas": "chicken enchiladas", "k-veggie-quesadillas": "quesadilla", "k-salmon-broccoli": "baked salmon with broccoli", "k-turkey-burgers": "turkey burger",
-    "k-steak-salad": "steak salad", "k-chicken-tray": "roast chicken and vegetables tray", "k-chicken-caesar": "chicken caesar salad", "k-turkey-chili": "chili con carne bowl",
-    "k-greek-chicken-bowls": "chicken souvlaki plate", "k-salmon-salad": "salmon salad"
+    "k-bolognese": "rigatoni bolognese", "k-chicken-tacos": "chicken taco", "k-turkey-taco-bowls": "burrito bowl", "k-carne-asada-bowls": "carne asada",
+    "k-chicken-enchiladas": "chicken enchiladas", "k-veggie-quesadillas": "quesadilla", "k-salmon-broccoli": "baked salmon fillet", "k-turkey-burgers": "turkey burger",
+    "k-steak-salad": "steak salad", "k-chicken-tray": "roast chicken with vegetables", "k-chicken-caesar": "chicken caesar salad", "k-turkey-chili": "chili con carne bowl",
+    "k-greek-chicken-bowls": "chicken souvlaki", "k-salmon-salad": "grilled salmon on salad"
   },
   sides: {
     "s-parsnip": "parsnip", "s-smashed": "roast potatoes", "s-dill-potatoes": "boiled potatoes", "s-polenta": "polenta", "s-rice": "bowl of steamed rice",
@@ -51,6 +51,7 @@ window.GALLERY = {
     ["mozzarella", "fresh mozzarella"], ["cheddar", "cheddar cheese"], ["spaghetti", "dry spaghetti"], ["yogurt", "greek yogurt"], ["dill", "fresh dill"], ["celery", "celery stalks"]
   ],
   picks: {
-    "dish:fish-tacos": "File:Fish tacos in Pittsburg.jpg", "ing:scallion": "File:Bunches of spring onions 1.jpg", "ing:parsnip": "File:Parsnips.JPG"
+    "dish:fish-tacos": "File:Fish tacos in Pittsburg.jpg", "ing:scallion": "File:Bunches of spring onions 1.jpg", "ing:parsnip": "File:Parsnips.JPG",
+    "dish:k-chicken-caesar": "File:Chicken Caesar Salad - Amo 2026-04-11.jpg", "dish:k-chicken-parm": "File:Chicken parmigiana.jpg"
   }
 };
