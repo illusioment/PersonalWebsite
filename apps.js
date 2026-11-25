@@ -22,6 +22,7 @@ window.HUB = {
     { id: "tools",       name: "Tools",       blurb: "Things that get a job done." },
     { id: "cards",       name: "Trading Cards", blurb: "Track what cards are worth, and make your own." },
     { id: "corner",      name: "Karly & Andrew's Corner", blurb: "Things we made for the two of us." },
+    { id: "education",   name: "Education",   blurb: "Courses I'm working through, with notes, quizzes and calculators." },
     { id: "projects",    name: "Projects",    blurb: "Bigger builds, tracked from plan to done." },
     { id: "work",        name: "Work",        blurb: "Apps built for the day job." },
     { id: "experiments", name: "Experiments", blurb: "Half-finished ideas and odd prototypes." }
@@ -37,6 +38,8 @@ window.HUB = {
 
     // Work tools live on a separate password-protected site.
     { name: "Work Site", desc: "Private work tools, behind a password.", category: "work", url: "https://personalwebsitework.netlify.app/", status: "private", external: true },
+
+    { name: "Derivatives Course", desc: "Futures, forwards, options and swaps in twelve modules, ending on the metals desk. Lessons, quizzes and five calculators.", category: "education", url: "education/derivatives/", status: "new" },
 
     // Copy this line, remove the two slashes, and fill it in:
     // { name: "My App", desc: "What it does in one sentence.", category: "tools", url: "tools/my-app/", status: "new" },

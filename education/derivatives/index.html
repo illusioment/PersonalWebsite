@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Derivatives course</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Sora:wght@300;400;600&family=Unbounded:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* A course reader in the hub's palette. Left: the syllabus as a module list with
+   progress. Right: whichever page is open (overview, a module's lessons and quiz,
+   the calculators, or the reading list). Course text lives in course.js; progress
+   and quiz answers are kept in this browser. */
+:root {
+  --bg: #071A16; --panel: #0E2A23; --line: #2A5A4B; --text: #E4F2E6; --muted: #93B5A5;
+  --leaf: #7BE0A0; --sun: #F4C453; --down: #FF8F7A;
+  --font-display: "Unbounded", "Trebuchet MS", sans-serif;
+  --font-body: "Sora", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-body); font-weight: 300; font-size: 16px; line-height: 1.6;
+  background-image: radial-gradient(900px 500px at 85% -10%, rgba(244, 196, 83, .10), transparent 70%); background-attachment: fixed; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 56px; }
+:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+[hidden] { display: none !important; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+b, strong { font-weight: 600; }
+a { color: var(--leaf); }
+.top { padding: 20px 0; border-bottom: 1px solid var(--line); }
+.top a { color: var(--muted); text-decoration: none; }
+.top a:hover { color: var(--leaf); }
+.eyebrow { color: var(--sun); margin: 32px 0 8px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.6vw, 36px); line-height: 1.15; letter-spacing: -.02em; margin: 0 0 12px; max-width: 24ch; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 66ch; margin: 0 0 24px; }
+.layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 32px; align-items: start; }
+nav.side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+nav.side a { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 14.5px; line-height: 1.35; }
+nav.side a:hover { background: rgba(123, 224, 160, .08); }
+nav.side a[aria-current="page"] { background: var(--panel); box-shadow: inset 2px 0 0 var(--sun); }
+nav.side .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+nav.side .p { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
+nav.side a.done .p { color: var(--leaf); }
+nav.side .grp { color: var(--muted); padding: 14px 10px 4px; }
+.meter { height: 6px; border-radius: 3px; background: rgba(147, 181, 165, .22); overflow: hidden; margin: 6px 10px 4px; }
+.meter i { display: block; height: 100%; background: var(--leaf); border-radius: 3px; }
+main h2 { font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.2; margin: 0 0 6px; }
+main h3 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+.sub { color: var(--muted); margin: 0 0 20px; max-width: 70ch; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; }
+.panel p { margin: 0 0 12px; max-width: 72ch; }
+.panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+.panel ul { margin: 0 0 12px; padding-left: 20px; max-width: 72ch; }
+.panel li { margin-bottom: 6px; }
+.lhead { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 10px; }
+.lhead label { display: inline-flex; gap: 8px; align-items: center; color: var(--muted); font-size: 14px; white-space: nowrap; }
+.lhead input { width: 18px; height: 18px; accent-color: var(--leaf); margin: 0; }
+.formula { font-family: var(--font-mono); font-size: 14.5px; background: var(--bg); border: 1px solid var(--line); border-left: 3px solid var(--sun); border-radius: 6px; padding: 12px 14px; margin: 0 0 12px; white-space: pre-wrap; overflow-x: auto; }
+.formula small { display: block; font-family: var(--font-body); color: var(--muted); font-size: 13px; margin-top: 6px; white-space: normal; }
+.example { border: 1px dashed var(--line); border-radius: 10px; padding: 12px 16px; margin: 0 0 12px; }
+.example .mono { color: var(--leaf); display: block; margin-bottom: 6px; }
+.example ol { margin: 0; padding-left: 20px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+.table th { text-align: left; font-family: var(--font-mono); font-weight: 500; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); }
+.table td { padding: 8px 12px 8px 0; border-bottom: 1px solid rgba(42, 90, 75, .6); vertical-align: top; }
+.table td.r, .table th.r { text-align: right; white-space: nowrap; }
+.q { padding: 14px 0; border-top: 1px solid rgba(42, 90, 75, .6); }
+.q:first-of-type { border-top: 0; padding-top: 0; }
+.q p { margin: 0 0 8px; font-weight: 400; }
+.q label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; cursor: pointer; }
+.q label:hover { border-color: var(--leaf); }
+.q input { margin: 5px 0 0; accent-color: var(--sun); }
+.q label.right { border-color: var(--leaf); background: rgba(123, 224, 160, .1); }
+.q label.wrong { border-color: var(--down); background: rgba(255, 143, 122, .08); }
+.q .why { color: var(--muted); font-size: 14.5px; margin: 6px 0 0; }
+.q .why b { color: var(--text); }
+.btnrow { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.btn { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; color: var(--text); text-decoration: none; font-size: 14.5px; }
+.btn:hover { border-color: var(--leaf); color: var(--leaf); }
+.btn.primary { background: var(--sun); border-color: var(--sun); color: #1A1400; font-weight: 600; }
+.warn { border-left: 3px solid var(--down); padding-left: 14px; color: var(--muted); font-size: 14.5px; max-width: 76ch; }
+/* calculators */
+.form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 14px; margin-bottom: 14px; }
+.form label { display: block; color: var(--muted); font-size: 13px; }
+.form input, .form select { display: block; width: 100%; margin-top: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 15px; }
+.form input { font-family: var(--font-mono); }
+.out { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
+.out div span { display: block; color: var(--muted); font-size: 13px; }
+.out div b { font-family: var(--font-mono); font-weight: 500; font-size: 20px; }
+.neg { color: var(--down); } .pos { color: var(--leaf); }
+.legs { display: grid; gap: 8px; margin-bottom: 12px; }
+.leg { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; }
+.leg label { color: var(--muted); font-size: 12.5px; }
+.leg input, .leg select { display: block; width: 100%; margin-top: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font-size: 14px; font-family: var(--font-mono); color: var(--text); }
+.leg button { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; color: var(--muted); }
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart .read { position: absolute; top: 6px; right: 8px; font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); background: rgba(7, 26, 22, .85); padding: 2px 6px; border-radius: 4px; }
+footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; max-width: 84ch; }
+@media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } nav.side { position: static; max-height: none; border: 1px solid var(--line); border-radius: 14px; padding: 6px; } .wrap { padding: 0 16px 48px; } .leg { grid-template-columns: 1fr 1fr; } }
+@media print { nav.side, .top, .btnrow, footer { display: none; } body { background: #fff; color: #000; } .panel { border-color: #999; background: #fff; } .layout { display: block; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top"><a class="mono" href="../../">← Back to hub</a></header>
+  <div class="eyebrow mono">Education · Course 1</div>
+  <h1 id="title"></h1>
+  <p class="lede" id="blurb"></p>
+  <div class="layout">
+    <nav class="side" id="side" aria-label="Syllabus"></nav>
+    <main id="main"></main>
+  </div>
+  <footer id="foot"></footer>
+</div>
+
+<script src="course.js"></script>
+<script>
+"use strict";
+const C = window.COURSE, KEY = "edu-derivatives";
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const usd = (v, d = 0) => (v < 0 ? "−$" : "$") + Math.abs(v).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fix = (v, d = 2) => isFinite(v) ? v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–";
+let P = { done: {}, quiz: {} };
+try { const v = JSON.parse(localStorage.getItem(KEY)); if (v && typeof v === "object") P = Object.assign(P, v); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(P)); } catch (e) {} };
+const TOOLS = { position: "Position and sizing", carry: "Cost of carry", hedge: "Hedge ratio", payoff: "Payoff builder", black: "Option pricer" };
+const lessonsDone = (m) => m.lessons.filter((l) => P.done[l.id]).length;
+const quizScore = (m) => { const a = P.quiz[m.id] || {}; return m.quiz.filter((q, i) => a[i] === q.a).length; };
+const quizTried = (m) => Object.keys(P.quiz[m.id] || {}).length;
+const complete = (m) => lessonsDone(m) === m.lessons.length && quizTried(m) === m.quiz.length;
+const route = () => { const h = location.hash.slice(1); return h || "syllabus"; };
+
+function side() {
+  const s = $("side"), r = route(); s.textContent = "";
+  const all = C.modules.flatMap((m) => m.lessons), done = all.filter((l) => P.done[l.id]).length;
+  const link = (href, n, text, p, cls) => { const a = el("a", cls || ""); a.href = "#" + href; if (r === href || (href === "tools" && r.startsWith("tool-"))) a.setAttribute("aria-current", "page"); a.append(el("span", "n", n), el("span", null, text), el("span", "p", p || "")); return a; };
+  s.appendChild(link("syllabus", "·", "Syllabus and how to use it", ""));
+  const meter = el("div", "meter"), bar = el("i"); bar.style.width = done / all.length * 100 + "%"; meter.appendChild(bar);
+  s.append(el("div", "grp mono", "Modules · " + done + " of " + all.length + " lessons"), meter);
+  C.modules.forEach((m, i) => s.appendChild(link(m.id, String(i + 1).padStart(2, "0"), m.title, complete(m) ? "✓ done" : lessonsDone(m) + "/" + m.lessons.length, complete(m) ? "done" : "")));
+  s.appendChild(el("div", "grp mono", "Workbench"));
+  s.appendChild(link("tools", "∑", "Calculators", "")); s.appendChild(link("reading", "§", "Reading list", ""));
+}
+
+function block(b) {
+  if (typeof b === "string") return el("p", null, b);
+  if (b.f) { const d = el("div", "formula", b.f); if (b.note) d.appendChild(el("small", null, b.note)); return d; }
+  if (b.ex) { const d = el("div", "example"), ol = el("ol"); d.appendChild(el("span", "mono", "Worked example · " + b.ex)); b.lines.forEach((t) => ol.appendChild(el("li", null, t))); d.appendChild(ol); return d; }
+  if (b.list) { const ul = el("ul"); b.list.forEach((t) => ul.appendChild(el("li", null, t))); return ul; }
+  return el("p");
+}
+
+function syllabus(main) {
+  main.append(el("h2", null, "Syllabus"), el("p", "sub", C.weeks + " modules, about " + C.modules.reduce((a, m) => a + m.hours, 0) + " hours of study. One module a week is a comfortable pace."));
+  const p0 = el("div", "panel"); p0.appendChild(el("h3", null, "By the end you will be able to")); const ul = el("ul"); C.outcomes.forEach((t) => ul.appendChild(el("li", null, t))); p0.appendChild(ul); main.appendChild(p0);
+  const p1 = el("div", "panel"), t = el("table", "table"), hr = el("tr"); ["", "Module", "You will be able to", "Hours"].forEach((h, i) => hr.appendChild(el("th", i === 3 ? "r" : "", h))); t.appendChild(hr);
+  C.modules.forEach((m, i) => { const tr = el("tr"), td = el("td"), a = el("a", null, m.title); a.href = "#" + m.id; td.appendChild(a); tr.append(el("td", "num", String(i + 1).padStart(2, "0")), td, el("td", null, m.goal), el("td", "r num", String(m.hours))); t.appendChild(tr); });
+  p1.append(el("h3", null, "The twelve modules"), t); main.appendChild(p1);
+  const p2 = el("div", "panel"); p2.appendChild(el("h3", null, "How to use this course")); const u2 = el("ul"); C.how.forEach((x) => u2.appendChild(el("li", null, x))); p2.appendChild(u2); main.appendChild(p2);
+  main.appendChild(el("p", "warn", C.warning));
+  const next = C.modules.find((m) => !complete(m)); if (next) { const row = el("div", "btnrow"), a = el("a", "btn primary", (lessonsDone(C.modules[0]) ? "Continue: " : "Start: ") + next.title); a.href = "#" + next.id; row.appendChild(a); main.appendChild(row); }
+}
+
+function moduleView(main, m) {
+  const i = C.modules.indexOf(m);
+  main.append(el("div", "mono", "Module " + (i + 1) + " of " + C.modules.length + " · about " + m.hours + " hours"), el("h2", null, m.title), el("p", "sub", "Goal: " + m.goal));
+  main.firstChild.style.color = "var(--muted)"; main.firstChild.style.marginBottom = "6px";
+  m.lessons.forEach((l, k) => {
+    const p = el("article", "panel"), head = el("div", "lhead"), lab = el("label"), cb = el("input"); cb.type = "checkbox"; cb.checked = !!P.done[l.id];
+    cb.addEventListener("change", () => { P.done[l.id] = cb.checked; save(); side(); }); lab.append(cb, "Done");
+    head.append(el("h3", null, (i + 1) + "." + (k + 1) + "  " + l.title), lab); p.appendChild(head); l.body.forEach((b) => p.appendChild(block(b))); main.appendChild(p);
+  });
+  if (m.tools && m.tools.length) { const p = el("div", "panel"), row = el("div", "btnrow"); row.style.marginTop = "8px"; p.append(el("h3", null, "Try it"), el("p", null, "Calculators for this module:")); m.tools.forEach((t) => { const a = el("a", "btn", TOOLS[t]); a.href = "#tool-" + t; row.appendChild(a); }); p.appendChild(row); main.appendChild(p); }
+  if (m.practice && m.practice.length) { const p = el("div", "panel"), ul = el("ul"); m.practice.forEach((t) => ul.appendChild(el("li", null, t))); p.append(el("h3", null, "Practice"), ul); main.appendChild(p); }
+  const qp = el("div", "panel"), score = el("p", "sub"); score.style.margin = "0 0 12px"; qp.append(el("h3", null, "Check yourself"), score);
+  const ans = P.quiz[m.id] || (P.quiz[m.id] = {});
+  const upd = () => { score.textContent = quizTried(m) ? "Score: " + quizScore(m) + " of " + m.quiz.length + (quizTried(m) < m.quiz.length ? " so far" : "") : "Pick an answer to see the explanation."; };
+  m.quiz.forEach((q, qi) => {
+    const box = el("div", "q"), why = el("p", "why"); box.appendChild(el("p", null, (qi + 1) + ". " + q.q));
+    const labels = q.options.map((o, oi) => { const lab = el("label"), r = el("input"); r.type = "radio"; r.name = m.id + "-" + qi; r.checked = ans[qi] === oi; r.addEventListener("change", () => { ans[qi] = oi; save(); mark(); upd(); side(); }); lab.append(r, el("span", null, o)); box.appendChild(lab); return lab; });
+    const mark = () => { labels.forEach((l, oi) => { l.className = ans[qi] == null ? "" : oi === q.a ? "right" : oi === ans[qi] ? "wrong" : ""; }); why.textContent = ""; if (ans[qi] != null) { why.append(el("b", null, ans[qi] === q.a ? "Correct. " : "Not quite. "), q.why); } };
+    mark(); box.appendChild(why); qp.appendChild(box);
+  });
+  upd(); main.appendChild(qp);
+  const nav = el("div", "btnrow"), prev = C.modules[i - 1], next = C.modules[i + 1];
+  if (prev) { const a = el("a", "btn", "← " + prev.title); a.href = "#" + prev.id; nav.appendChild(a); }
+  if (next) { const a = el("a", "btn primary", "Next: " + next.title + " →"); a.href = "#" + next.id; nav.appendChild(a); } else { const a = el("a", "btn primary", "Back to the syllabus"); a.href = "#syllabus"; nav.appendChild(a); }
+  main.appendChild(nav);
+}
+
+/* ---------- calculators ---------- */
+const field = (label, value, opts = {}) => { const lab = el("label", null, label), inp = el(opts.options ? "select" : "input"); if (opts.options) opts.options.forEach(([v, t]) => { const o = el("option", null, t); o.value = v; inp.appendChild(o); }); else { inp.type = "number"; inp.step = opts.step || "any"; } inp.value = value; lab.appendChild(inp); return [lab, inp]; };
+const outBox = (pairs) => { const o = el("div", "out"); pairs.forEach(([k, v, cls]) => { const d = el("div"); d.append(el("span", null, k), el("b", cls || "", v)); o.appendChild(d); }); return o; };
+const CONTRACTS = { hg: ["COMEX copper (25,000 lb, $/lb)", 25000, 0.0005, 5.0, 4.9, 9000], lmecu: ["LME copper (25 t, $/t)", 25, 0.5, 11000, 10800, 20000], lmeal: ["LME aluminium (25 t, $/t)", 25, 0.5, 3000, 2950, 6000], hrc: ["US hot-rolled coil (20 short tons, $/ton)", 20, 1, 1000, 950, 2500], custom: ["Custom contract", 1, 0.01, 100, 99, 1000] };
+function toolPosition(box) {
+  const f = el("div", "form"), out = el("div");
+  const [l0, c] = field("Contract", "hg", { options: Object.entries(CONTRACTS).map(([k, v]) => [k, v[0]]) }), [l1, sd] = field("Side", "1", { options: [["1", "Long (bought)"], ["-1", "Short (sold)"]] }), [l2, n] = field("Contracts", 2), [l3, en] = field("Entry price", 5), [l4, ex] = field("Exit price", 4.9), [l5, mg] = field("Margin per contract, $", 9000), [l6, sz] = field("Contract size", 25000), [l7, tk] = field("Tick size", 0.0005);
+  f.append(l0, l1, l2, l3, l4, l5, l6, l7);
+  const calc = () => { const size = +sz.value, q = +n.value, pnl = (+ex.value - +en.value) * size * q * +sd.value, notional = +en.value * size * q, margin = +mg.value * q; out.textContent = "";
+    out.appendChild(outBox([["Value of one contract", usd(+en.value * size)], ["One tick is worth", usd(+tk.value * size, 2)], ["Position value", usd(notional)], ["Profit or loss", usd(pnl), pnl < 0 ? "neg" : "pos"], ["As a share of margin", margin ? fix(pnl / margin * 100, 1) + "%" : "–", pnl < 0 ? "neg" : "pos"], ["Leverage", margin ? fix(notional / margin, 1) + "×" : "–"]])); };
+  c.addEventListener("change", () => { const v = CONTRACTS[c.value]; sz.value = v[1]; tk.value = v[2]; en.value = v[3]; ex.value = v[4]; mg.value = v[5]; calc(); });
+  [sd, n, en, ex, mg, sz, tk].forEach((i) => i.addEventListener("input", calc)); calc();
+  box.append(el("p", null, "What a price move means in dollars. Margin figures are placeholders; use your broker's current number."), f, out);
+  const f2 = el("div", "form"), out2 = el("div"), [a0, cap] = field("Capital, $", 200000), [a1, rk] = field("Risk per trade, %", 1), [a2, st] = field("Stop distance (price units)", 0.06);
+  f2.append(a0, a1, a2); f2.style.marginTop = "20px";
+  const calc2 = () => { const per = +st.value * +sz.value, budget = +cap.value * +rk.value / 100; out2.textContent = ""; out2.appendChild(outBox([["Risk budget", usd(budget)], ["Risk per contract at the stop", usd(per)], ["Contracts to trade", per > 0 ? String(Math.floor(budget / per)) : "–"]])); };
+  [cap, rk, st, sz].forEach((i) => i.addEventListener("input", calc2)); c.addEventListener("change", calc2); calc2();
+  box.append(el("h3", null, "Position size from a risk budget"), f2, out2); box.children[box.children.length - 3].style.marginTop = "22px";
+}
+function toolCarry(box) {
+  const f = el("div", "form"), out = el("div"), [l0, S] = field("Spot price", 3000), [l1, r] = field("Interest rate, % a year", 5), [l2, u] = field("Storage, % a year", 2), [l3, y] = field("Convenience yield, % a year", 0), [l4, d] = field("Days ahead", 182), [l5, F] = field("Market forward price (optional)", "");
+  f.append(l0, l1, l2, l3, l4, l5);
+  const calc = () => { const T = +d.value / 365, fair = +S.value * Math.exp((+r.value + +u.value - +y.value) / 100 * T), full = +S.value * Math.exp((+r.value + +u.value) / 100 * T), rows = [["Fair forward price", fix(fair, 2)], ["Full-carry price (no convenience yield)", fix(full, 2)], ["Carry cost over the period", fix(full - +S.value, 2)]];
+    if (F.value !== "" && +F.value > 0 && T > 0) { const iy = (+r.value + +u.value) / 100 - Math.log(+F.value / +S.value) / T; rows.push(["Implied convenience yield", fix(iy * 100, 2) + "% a year", iy > 0.02 ? "pos" : ""], ["Market shape", +F.value >= +S.value ? "Contango" : "Backwardation"]); }
+    out.textContent = ""; out.appendChild(outBox(rows)); };
+  [S, r, u, y, d, F].forEach((i) => i.addEventListener("input", calc)); calc();
+  box.append(el("p", null, "F = S × e^((r + u − y) × T). Enter a market forward price to back out the convenience yield the market is implying."), f, out);
+}
+function toolHedge(box) {
+  const f = el("div", "form"), out = el("div"), [l0, ss] = field("Volatility of your price, %", 22), [l1, sf] = field("Volatility of the future, %", 30), [l2, rho] = field("Correlation (−1 to 1)", 0.8), [l3, ex] = field("Exposure (tonnes or tons)", 1000), [l4, cs] = field("Contract size (same unit)", 20);
+  f.append(l0, l1, l2, l3, l4);
+  const calc = () => { const h = +rho.value * +ss.value / +sf.value, nn = h * +ex.value / +cs.value; out.textContent = ""; out.appendChild(outBox([["Hedge ratio h*", fix(h, 2)], ["Contracts", fix(nn, 1) + " → " + Math.round(nn)], ["Price variance removed", fix(Math.min(1, +rho.value * +rho.value) * 100, 0) + "%"], ["Volatility left after hedging", fix(+ss.value * Math.sqrt(Math.max(0, 1 - +rho.value * +rho.value)), 1) + "%"]])); };
+  [ss, sf, rho, ex, cs].forEach((i) => i.addEventListener("input", calc)); calc();
+  box.append(el("p", null, "h* = ρ × σS ÷ σF. The hedge that minimises the variance of your combined position."), f, out);
+}
+const ncdf = (x) => { const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989423 * Math.exp(-x * x / 2), p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
+const npdf = (x) => Math.exp(-x * x / 2) / Math.sqrt(2 * Math.PI);
+function black76(F, K, T, r, v) { if (!(F > 0 && K > 0 && T > 0 && v > 0)) return null; const sq = v * Math.sqrt(T), d1 = (Math.log(F / K) + v * v * T / 2) / sq, d2 = d1 - sq, df = Math.exp(-r * T);
+  const call = df * (F * ncdf(d1) - K * ncdf(d2)), put = df * (K * ncdf(-d2) - F * ncdf(-d1));
+  return { call, put, dc: df * ncdf(d1), dp: -df * ncdf(-d1), gamma: df * npdf(d1) / (F * sq), vega: F * df * npdf(d1) * Math.sqrt(T) / 100, thetaC: (-F * df * npdf(d1) * v / (2 * Math.sqrt(T)) + r * call) / 365, thetaP: (-F * df * npdf(d1) * v / (2 * Math.sqrt(T)) + r * put) / 365 }; }
+function toolBlack(box) {
+  const f = el("div", "form"), out = el("div"), [l0, F] = field("Futures price", 5), [l1, K] = field("Strike", 5), [l2, d] = field("Days to expiry", 90), [l3, v] = field("Volatility, % a year", 25), [l4, r] = field("Interest rate, %", 5);
+  f.append(l0, l1, l2, l3, l4);
+  const calc = () => { const b = black76(+F.value, +K.value, +d.value / 365, +r.value / 100, +v.value / 100); out.textContent = ""; if (!b) { out.appendChild(el("p", "sub", "Enter positive values for price, strike, days and volatility.")); return; }
+    const t = el("table", "table"), hr = el("tr"); ["", "Call", "Put"].forEach((h, i) => hr.appendChild(el("th", i ? "r" : "", h))); t.appendChild(hr);
+    [["Price", fix(b.call, 4), fix(b.put, 4)], ["Delta", fix(b.dc, 3), fix(b.dp, 3)], ["Gamma (per 1.00 move)", fix(b.gamma, 4), fix(b.gamma, 4)], ["Theta (per day)", fix(b.thetaC, 5), fix(b.thetaP, 5)], ["Vega (per 1 vol point)", fix(b.vega, 4), fix(b.vega, 4)], ["Intrinsic value", fix(Math.max(+F.value - +K.value, 0), 4), fix(Math.max(+K.value - +F.value, 0), 4)]].forEach((row) => { const tr = el("tr"); tr.append(el("td", null, row[0]), el("td", "r num", row[1]), el("td", "r num", row[2])); t.appendChild(tr); });
+    out.append(t, el("p", "sub", "Implied typical daily move: about " + fix(+v.value / Math.sqrt(252), 2) + "%, or " + fix(+F.value * +v.value / 100 / Math.sqrt(252), 4) + " in price terms.")); out.lastChild.style.margin = "12px 0 0"; };
+  [F, K, d, v, r].forEach((i) => i.addEventListener("input", calc)); calc();
+  box.append(el("p", null, "Black-76, the standard model for European options on futures. Prices are per unit of the underlying (per pound for COMEX copper)."), f, out);
+}
+const PRESETS = { "Long call": [["call", 1, 5, 0.12, 1]], "Protective put (long future + put)": [["future", 1, 5, 0, 1], ["put", 1, 4.8, 0.07, 1]], "Collar on inventory": [["future", 1, 5, 0, 1], ["put", 1, 4.75, 0.06, 1], ["call", -1, 5.3, 0.06, 1]], "Bull call spread": [["call", 1, 5, 0.12, 1], ["call", -1, 5.2, 0.05, 1]], "Long straddle": [["call", 1, 5, 0.12, 1], ["put", 1, 5, 0.12, 1]], "Short strangle": [["call", -1, 5.3, 0.04, 1], ["put", -1, 4.7, 0.04, 1]] };
+function toolPayoff(box) {
+  let legs = PRESETS["Collar on inventory"].map((l) => l.slice());
+  const pre = el("div", "btnrow"), legBox = el("div", "legs"), chart = el("div", "chart"), out = el("div"); pre.style.margin = "0 0 14px";
+  Object.keys(PRESETS).forEach((k) => { const b = el("button", "btn", k); b.type = "button"; b.addEventListener("click", () => { legs = PRESETS[k].map((l) => l.slice()); drawLegs(); calc(); }); pre.appendChild(b); });
+  const value = (x) => legs.reduce((a, [t, s, k, p, q]) => a + s * q * (t === "future" ? x - k : (t === "call" ? Math.max(x - k, 0) : Math.max(k - x, 0)) - p), 0);
+  function drawLegs() { legBox.textContent = ""; legs.forEach((leg, i) => { const row = el("div", "leg");
+      const mk = (label, idx, opts) => { const [lab, inp] = field(label, leg[idx], opts || {}); inp.addEventListener("input", () => { leg[idx] = opts ? (idx === 0 ? inp.value : +inp.value) : +inp.value; if (idx === 0) drawLegs(); calc(); }); return lab; };
+      row.append(mk("Type", 0, { options: [["call", "Call"], ["put", "Put"], ["future", "Future"]] }), mk("Side", 1, { options: [["1", "Long"], ["-1", "Short"]] }), mk(leg[0] === "future" ? "Entry price" : "Strike", 2), leg[0] === "future" ? el("span") : mk("Premium", 3), mk("Quantity", 4));
+      const del = el("button", null, "Remove"); del.type = "button"; del.addEventListener("click", () => { legs.splice(i, 1); drawLegs(); calc(); }); row.appendChild(del); legBox.appendChild(row); });
+    const add = el("button", "btn", "+ Add a leg"); add.type = "button"; add.addEventListener("click", () => { legs.push(["call", 1, legs.length ? legs[0][2] : 5, 0.1, 1]); drawLegs(); calc(); }); legBox.appendChild(add); }
+  function calc() { chart.textContent = ""; out.textContent = ""; if (!legs.length) return;
+    const ks = legs.map((l) => l[2]).filter((k) => k > 0), mid = ks.reduce((a, b) => a + b, 0) / ks.length, lo = Math.min(...ks) * 0.8, hi = Math.max(...ks) * 1.2, N = 240, xs = [], ys = [];
+    for (let i = 0; i <= N; i++) { const x = lo + (hi - lo) * i / N; xs.push(x); ys.push(value(x)); }
+    const ymin = Math.min(...ys, 0), ymax = Math.max(...ys, 0), pad = (ymax - ymin) * 0.12 || 1, y0 = ymin - pad, y1 = ymax + pad, W = 720, H = 300, L = 54, R = 12, T = 12, B = 30;
+    const X = (x) => L + (x - lo) / (hi - lo) * (W - L - R), Y = (y) => T + (y1 - y) / (y1 - y0) * (H - T - B), NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Profit or loss at expiry across futures prices");
+    const add = (tag, a, text) => { const n = document.createElementNS(NS, tag); for (const k in a) n.setAttribute(k, a[k]); if (text != null) n.textContent = text; svg.appendChild(n); return n; };
+    for (let g = 0; g <= 4; g++) { const yv = y0 + (y1 - y0) * g / 4; add("line", { x1: L, x2: W - R, y1: Y(yv), y2: Y(yv), stroke: "rgba(147,181,165,.15)" }); add("text", { x: L - 6, y: Y(yv) + 4, "text-anchor": "end", fill: "#93B5A5", "font-size": 11, "font-family": "IBM Plex Mono, monospace" }, fix(yv, 2)); }
+    for (let g = 0; g <= 4; g++) { const xv = lo + (hi - lo) * g / 4; add("text", { x: X(xv), y: H - 10, "text-anchor": "middle", fill: "#93B5A5", "font-size": 11, "font-family": "IBM Plex Mono, monospace" }, fix(xv, 2)); }
+    add("line", { x1: L, x2: W - R, y1: Y(0), y2: Y(0), stroke: "#93B5A5", "stroke-width": 1 });
+    add("polyline", { points: xs.map((x, i) => X(x).toFixed(1) + "," + Y(ys[i]).toFixed(1)).join(" "), fill: "none", stroke: "#F4C453", "stroke-width": 2, "stroke-linejoin": "round" });
+    const cross = add("line", { x1: 0, x2: 0, y1: T, y2: H - B, stroke: "#E4F2E6", "stroke-width": 1, opacity: 0 }), dot = add("circle", { r: 4, fill: "#F4C453", stroke: "#071A16", "stroke-width": 2, opacity: 0 }), read = el("div", "read", "Hover for values");
+    svg.addEventListener("pointermove", (ev) => { const r = svg.getBoundingClientRect(), x = lo + Math.max(0, Math.min(1, ((ev.clientX - r.left) / r.width * W - L) / (W - L - R))) * (hi - lo), y = value(x); cross.setAttribute("x1", X(x)); cross.setAttribute("x2", X(x)); cross.setAttribute("opacity", .5); dot.setAttribute("cx", X(x)); dot.setAttribute("cy", Y(y)); dot.setAttribute("opacity", 1); read.textContent = "At " + fix(x, 3) + ": " + (y >= 0 ? "+" : "−") + fix(Math.abs(y), 3); });
+    svg.addEventListener("pointerleave", () => { cross.setAttribute("opacity", 0); dot.setAttribute("opacity", 0); read.textContent = "Hover for values"; });
+    chart.append(svg, read);
+    const be = []; for (let i = 1; i < xs.length; i++) if ((ys[i - 1] < 0) !== (ys[i] < 0)) be.push(xs[i - 1] + (xs[i] - xs[i - 1]) * (0 - ys[i - 1]) / (ys[i] - ys[i - 1]));
+    const slopeHi = (value(hi * 3) - value(hi * 2)), slopeLo = value(0) , openUp = slopeHi > 1e-9, openDn = slopeHi < -1e-9, far = [value(0), value(hi * 2), ...ys];
+    const net = legs.reduce((a, [t, s, , p, q]) => a + (t === "future" ? 0 : -s * q * p), 0);
+    out.appendChild(outBox([["Breakeven" + (be.length === 1 ? "" : "s"), be.length ? be.map((b) => fix(b, 3)).join(" and ") : "None in range"], ["Most you can make", openUp ? "Unlimited as price rises" : fix(Math.max(...far), 3), "pos"], ["Most you can lose", openDn ? "Unlimited as price rises" : fix(Math.min(...far), 3), "neg"], ["Premium " + (net >= 0 ? "received" : "paid"), fix(Math.abs(net), 3)]]));
+  }
+  drawLegs(); calc();
+  box.append(el("p", null, "Profit or loss at expiry, per unit, across futures prices. Start from a preset or build your own from calls, puts and futures."), pre, legBox, chart, out);
+}
+const TOOLFN = { position: toolPosition, carry: toolCarry, hedge: toolHedge, payoff: toolPayoff, black: toolBlack };
+function toolsView(main, which) {
+  main.append(el("h2", null, "Calculators"), el("p", "sub", "Five small tools for testing the course's formulas with your own numbers. They are teaching aids: check any real trade against your broker's figures."));
+  const row = el("div", "btnrow"); row.style.margin = "0 0 16px"; Object.entries(TOOLS).forEach(([k, n]) => { const a = el("a", "btn" + (k === which ? " primary" : ""), n); a.href = "#tool-" + k; row.appendChild(a); }); main.appendChild(row);
+  const p = el("div", "panel"); p.appendChild(el("h3", null, TOOLS[which])); TOOLFN[which](p); main.appendChild(p);
+}
+function readingView(main) {
+  main.append(el("h2", null, "Reading list"), el("p", "sub", "Where to go deeper. None of these is required to finish the course."));
+  const p = el("div", "panel"), ul = el("ul"); C.reading.forEach(([t, d]) => { const li = el("li"); li.append(el("b", null, t + ". "), d); ul.appendChild(li); }); p.appendChild(ul); main.appendChild(p);
+}
+function render() {
+  const main = $("main"), r = route(); main.textContent = ""; side();
+  const m = C.modules.find((x) => x.id === r);
+  if (m) moduleView(main, m); else if (r === "tools") toolsView(main, "position"); else if (r.startsWith("tool-") && TOOLFN[r.slice(5)]) toolsView(main, r.slice(5)); else if (r === "reading") readingView(main); else syllabus(main);
+}
+$("title").textContent = C.title; $("blurb").textContent = C.blurb; document.title = "Derivatives course · " + C.title;
+$("foot").textContent = C.warning + " Progress and quiz answers are saved in this browser only.";
+addEventListener("hashchange", () => { render(); window.scrollTo(0, 0); });
+render();
+</script>
+</body>
+</html>
