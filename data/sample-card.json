@@ -71,7 +71,7 @@
   },
   "pricing": {
     "cardmarket": {
-      "updated": "2026-11-25T22:16:19.684Z",
+      "updated": "2026-11-26T22:16:19.243Z",
       "unit": "EUR",
       "idProduct": 918810,
       "avg": null,
@@ -89,21 +89,21 @@
     },
     "tcgplayer": {
       "unit": "USD",
-      "updated": "2026-11-25T22:16:36.509Z",
+      "updated": "2026-11-26T22:16:36.093Z",
       "reverse-holofoil": {
         "productId": 727563,
         "lowPrice": 0.01,
-        "midPrice": 0.23,
-        "highPrice": 15.24,
-        "marketPrice": 0.2,
-        "directLowPrice": 0.21
+        "midPrice": 0.22,
+        "highPrice": 15.18,
+        "marketPrice": 0.18,
+        "directLowPrice": 0.15
       },
       "normal": {
         "productId": 727563,
         "lowPrice": 0.01,
         "midPrice": 0.15,
-        "highPrice": 1.59,
-        "marketPrice": 0.12,
+        "highPrice": 5.99,
+        "marketPrice": 0.15,
         "directLowPrice": 0.05
       }
     }
